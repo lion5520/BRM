@@ -1,0 +1,146 @@
+﻿<?xml version="1.0"?>
+<doc>
+<assembly>
+<name>
+CreaCuentasBRM
+</name>
+</assembly>
+<members>
+<member name="T:CreaCuentasBRM.My.Resources.Resources">
+<summary>
+  A strongly-typed resource class, for looking up localized strings, etc.
+</summary>
+</member>
+<member name="P:CreaCuentasBRM.My.Resources.Resources.ResourceManager">
+<summary>
+  Returns the cached ResourceManager instance used by this class.
+</summary>
+</member>
+<member name="P:CreaCuentasBRM.My.Resources.Resources.Culture">
+<summary>
+  Overrides the current thread's CurrentUICulture property for all
+  resource lookups using this strongly typed resource class.
+</summary>
+</member>
+<member name="M:CreaCuentasBRM.CreaCliente.CrearAsync(CreaCuentasBRM.CreaCliente.TipoCliente,System.String,System.Boolean)">
+ <summary>
+ Crea un cliente PF/PJ. Si persist=False NO llama al endpoint (solo loguea el JSON).
+ Devuelve Success + AccountPoid (validado en BD) o Success=False.
+ </summary>
+</member>
+<member name="T:CreaCuentasBRM.CreaCuentasBRM.UiTextBoxLogger">
+ <summary>
+ Logger para enviar texto a 1 o 2 TextBox del formulario con sincronización de UI.
+ Métodos: AttachPrimary, AttachSecondary, WriteDebug, WriteData.
+ </summary>
+</member>
+<member name="M:CreaCuentasBRM.CreaCuentasBRM.UiTextBoxLogger.AttachSecondary(System.ComponentModel.ISynchronizeInvoke,System.Windows.Forms.TextBox)">
+ <summary>
+ Segundo TextBox para volcar JSON, respuestas, consultas, etc.
+ </summary>
+</member>
+<member name="M:CreaCuentasBRM.JsonLogHelper.Minify(System.String)">
+ <summary>
+ Minifica un JSON sin romper contenido entre comillas (quita espacios y saltos fuera de strings).
+ </summary>
+</member>
+<member name="M:CreaCuentasBRM.JsonLogHelper.LogRequestJson(System.Object,System.String,System.String)">
+ <summary>
+ Envía el JSON minificado a ambos canales (debug/data) si están disponibles.
+ </summary>
+</member>
+<member name="T:CreaCuentasBRM.RestJsonClient">
+ <summary>
+ Cliente REST para enviar JSON con POST (forzado).
+ - Valida endpoint y payload
+ - Timeout, reintentos con backoff
+ - Devuelve RestJsonResponse
+ - Sin "Await" dentro de Catch/Finally (compatible con VB.NET)
+ </summary>
+</member>
+<member name="M:CreaCuentasBRM.RestJsonClient.SendJsonAsync(System.String,System.String,System.Int32,System.Collections.Generic.Dictionary{System.String,System.String})">
+ <summary>
+ Envía JSON por POST al endpoint indicado (ruta relativa o URL absoluta).
+ </summary>
+</member>
+<member name="T:CreaCuentasBRM.RestJsonConfig">
+ <summary>
+ Config central para llamadas JSON (REST). Edita BaseUrl y ApiKey si aplica.
+ </summary>
+</member>
+<member name="T:CreaCuentasBRM.RestJsonResponse">
+ <summary>
+ Resultado estandarizado de la llamada REST.
+ </summary>
+</member>
+<member name="T:CreaCuentasBRM.AppLoggerConfig">
+ <summary>
+ Config global del logger. Edita rutas y tamaños aquí una sola vez.
+ </summary>
+</member>
+<member name="T:CreaCuentasBRM.BrmOracleConfig">
+ <summary>
+ Configuración central para conexión a Oracle BRM.
+ Modifica aquí los valores y todas las llamadas usarán esta configuración.
+ </summary>
+</member>
+<member name="M:CreaCuentasBRM.BrmOracleConfig.GetConnectionString">
+ <summary>
+ Devuelve la cadena completa de conexión Oracle lista para usar.
+ </summary>
+</member>
+<member name="M:CreaCuentasBRM.BrmOracleQuery.PreprocessSql(System.String)">
+ <summary>
+ Corrige SQLs heredados comunes que causan ORA-00904 por nombres de columnas equivocados.
+ También permite insertar pistas mínimas sin tocar el resto del código.
+ </summary>
+</member>
+<member name="T:CreaCuentasBRM.IAppLogger">
+ <summary>
+ Logger central con dos flujos lógicos:
+ 1) Errores/Excepciones
+ 2) Datos/JSON/Resultados (texto, objetos, etc.)
+ Salida: UI (TextBox) vía AppendText, thread-safe.
+ </summary>
+</member>
+<member name="M:CreaCuentasBRM.IProgreso.Reportar(System.Int32,System.String)">
+ <summary>
+ Reporta avance (1-100) y mensaje asociado.
+ </summary>
+ <param name="porcentaje">Entero 1 a 100</param>
+ <param name="mensaje">Texto descriptivo</param>
+</member>
+<member name="T:CreaCuentasBRM.ProgresoWinForms">
+ <summary>
+ Implementación de IProgreso para Windows Forms (multi-instancia y thread-safe).
+ Registra una o varias ProgressBar (y opcional Label) y actualiza todas con Reportar().
+ </summary>
+</member>
+<member name="M:CreaCuentasBRM.ProgresoWinForms.#ctor(System.Windows.Forms.Control)">
+ <summary>
+ Crea un puente de progreso que invoca seguro al hilo de UI.
+ Pasa cualquier control del formulario principal (por ejemplo: Me).
+ </summary>
+ <param name="syncControl">Control perteneciente al hilo de UI.</param>
+</member>
+<member name="M:CreaCuentasBRM.ProgresoWinForms.Registrar(System.Windows.Forms.ProgressBar,System.Windows.Forms.Label)">
+ <summary>
+ Registra una barra y opcionalmente una etiqueta para recibir actualizaciones.
+ Repite las veces necesarias para múltiples barras/etiquetas.
+ </summary>
+</member>
+<member name="T:CreaCuentasBRM.UiTextBoxLogger">
+ <summary>
+ Implementación de IAppLogger que escribe en un TextBox multiline,
+ SIN archivos. Thread-safe (marshaling al hilo UI). Mantiene un
+ máximo de líneas para evitar crecimiento infinito.
+ </summary>
+</member>
+<member name="M:CreaCuentasBRM.UiTextBoxLogger.#ctor(System.ComponentModel.ISynchronizeInvoke,System.Windows.Forms.TextBox,System.Int32,System.String)">
+ <param name="syncProvider">Cualquier Control del formulario principal (por ejemplo: Me)</param>
+ <param name="targetTextBox">TextBox multiline de salida</param>
+ <param name="maxLines">Máximo de líneas a conservar en el TextBox</param>
+ <param name="timestampFormat">Formato de timestamp por línea</param>
+</member>
+</members>
+</doc>

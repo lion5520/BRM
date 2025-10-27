@@ -1,0 +1,394 @@
+﻿Option Strict On
+Option Explicit On
+
+Imports System
+Imports System.IO
+Imports System.Net.Http
+Imports System.Text
+Imports System.Threading.Tasks
+Imports System.Data
+Imports Newtonsoft.Json
+Imports Newtonsoft.Json.Linq
+
+' ===== Resultado =====
+Public Class CrearClienteResult
+    Public Property Success As Boolean
+    Public Property AccountPoid As String            ' "0.0.0.1 /account <id> 0"
+    Public Property Documento As String              ' CPF/CNPJ
+    Public Property ProtocolId As String             ' ORACLE_SAP_TEST_####
+    Public Property HttpStatus As Integer?
+    Public Property RawBody As String
+End Class
+
+' ===== Servicio =====
+Public Class CreaCliente
+
+    Public Enum TipoCliente
+        PF = 1
+        PJ = 2
+    End Enum
+
+    ' ===== Config =====
+    Public Property BASE_URL As String = "http://brmdev.hml.ocpcorp.oi.intranet"
+    Private Const PATH_CREATE As String = "/BRMCustCustomServices/resources/BRMAccountCustomServicesREST/createCustomer"
+    Private Const PROTOCOL_PREFIX As String = "ORACLE_SAP_TEST_"
+
+    ' ===== Dependencias =====
+    Private Shared ReadOnly _http As HttpClient = New HttpClient() With {.Timeout = TimeSpan.FromSeconds(30)}
+    Private ReadOnly _db As BrmOracleQuery = New BrmOracleQuery()
+
+    ' ===== Telemetría/OUT =====
+    Public Property LastRequestJson As String
+    Public Property LastResponseBody As String
+    Public Property LastHttpStatus As Integer?
+    Public Property ErrorMessage As String
+    Public Property OnOut As Action(Of String) ' (el Form asigna AddressOf OutSink)
+
+    Private Sub OUT(line As String)
+        Try
+            If OnOut IsNot Nothing Then OnOut.Invoke(line)
+        Catch
+        End Try
+    End Sub
+
+    ' ===== API =====
+    Public Async Function CrearAsync(tipo As TipoCliente,
+                                     Optional ufPreferida As String = Nothing,
+                                     Optional persist As Boolean = True) As Task(Of CrearClienteResult)
+
+        Dim result As New CrearClienteResult()
+
+        Try
+            ' 1) Payload exacto
+            Dim payload As JObject = Await BuildPayloadAsync(tipo, ufPreferida).ConfigureAwait(False)
+            Dim json As String = payload.ToString(Formatting.None)
+            LastRequestJson = json
+            OUT(">>> [CREATE][JSON]")
+            OUT(LastRequestJson)
+
+            If Not persist Then
+                result.Success = True
+                result.Documento = payload.Value(Of String)("AC_FLD_CPF_CNPJ")
+                result.ProtocolId = payload.Value(Of String)("AC_FLD_PROTOCOL_ID")
+                result.AccountPoid = String.Empty
+                OUT("[CREATE][DRY-RUN] persist=False, POST omitido.")
+                Return result
+            End If
+
+            ' 2) POST
+            Dim endpoint As String = BASE_URL.TrimEnd("/"c) & PATH_CREATE
+            Using req As New HttpRequestMessage(HttpMethod.Post, endpoint)
+                req.Headers.Accept.Clear()
+                req.Headers.Accept.ParseAdd("application/json")
+                req.Content = New StringContent(json, Encoding.UTF8, "application/json")
+
+                Using resp = Await _http.SendAsync(req).ConfigureAwait(False)
+                    Dim body As String = Await resp.Content.ReadAsStringAsync().ConfigureAwait(False)
+                    LastHttpStatus = CInt(resp.StatusCode)
+                    LastResponseBody = body
+
+                    OUT("<<< [CREATE][HTTP] " & LastHttpStatus.GetValueOrDefault().ToString())
+                    OUT("<<< [CREATE][RESP]")
+                    OUT(LastResponseBody)
+
+                    ' 3) Validar en BD por CPF/CNPJ
+                    Dim doc As String = payload.Value(Of String)("AC_FLD_CPF_CNPJ")
+                    result.Documento = doc
+                    result.ProtocolId = payload.Value(Of String)("AC_FLD_PROTOCOL_ID")
+                    Dim poid As String = ObtenerPoidPorDocumento(doc)
+
+                    result.AccountPoid = poid
+                    result.HttpStatus = LastHttpStatus
+                    result.RawBody = LastResponseBody
+                    result.Success = (Not String.IsNullOrWhiteSpace(poid))
+                End Using
+            End Using
+
+        Catch ex As Exception
+            ErrorMessage = ex.Message
+            OUT("[CREATE][ERROR] " & ErrorMessage)
+            result.Success = False
+            result.HttpStatus = LastHttpStatus
+            result.RawBody = LastResponseBody
+        End Try
+
+        Return result
+    End Function
+
+    ' ===== Build JSON =====
+    Private Async Function BuildPayloadAsync(tipo As TipoCliente, ufPreferida As String) As Task(Of JObject)
+        Dim seed = PickSeedRow()
+        Dim name As String = If(String.IsNullOrWhiteSpace(seed.Name), "ORLANDO ROMERO", seed.Name.ToUpperInvariant())
+        Dim email As String = If(String.IsNullOrWhiteSpace(seed.Email), "demo@nio.local", seed.Email)
+        Dim phoneDigits As String = SoloDigitos(If(String.IsNullOrWhiteSpace(seed.Phone), "47998555123", seed.Phone))
+        Dim ufSeed As String = If(String.IsNullOrWhiteSpace(seed.UF), "DF", seed.UF.ToUpperInvariant())
+        Dim uf As String = If(String.IsNullOrWhiteSpace(ufPreferida), ufSeed, ufPreferida.ToUpperInvariant())
+        Dim city As String = If(String.IsNullOrWhiteSpace(seed.City), "BRASILIA", seed.City.ToUpperInvariant())
+
+        Dim protocol As String = GenerateUniqueProtocolId(PROTOCOL_PREFIX)
+        Dim isPF As Boolean = (tipo = TipoCliente.PF)
+        Dim doc As String = If(isPF, GenerarCPFValidoDemo(), GenerarCNPJValidoDemo())
+
+        ' Address (pipe-fixed 8 partes)
+        Dim addressPipe As String = "19769459|Rua|Governador Roberto Silveira|317|São Pedro|||"
+
+        Dim o As New JObject()
+        o.Add("AC_FLD_PROTOCOL_ID", protocol)
+        o.Add("BUSINESS_TYPE", If(isPF, "1", "2"))
+        o.Add("NAMEINFO", name)
+        o.Add("ADDRESS", addressPipe)
+        o.Add("ZIP", "19769459")
+        o.Add("CITY", city)
+        o.Add("STATE", uf)
+        o.Add("COUNTRY", "Brasil")
+        o.Add("PHONES", phoneDigits)
+        o.Add("PHONE_TYPE", "4")
+        o.Add("AC_FLD_SEGMENT", "Warm")
+        o.Add("AC_FLD_CPF_CNPJ", doc)
+        o.Add("COUNTRY_CODE", "")
+        o.Add("CITY_CODE", "")
+        o.Add("AC_FLD_ADDRESS_NUMBER", "317")
+        o.Add("AC_FLD_NEIGHBORHOOD", "São Pedro")
+        o.Add("AC_FLD_BIRTHDAY_T", "1990-05-06")
+        o.Add("AC_FLD_GENDER", "Masculino")
+        o.Add("AC_FLD_EMAIL", email)
+
+        If Not isPF Then
+            o.Add("AC_FLD_INSCRICAO_ESTADUAL", "326749879")
+            o.Add("AC_FLD_REPRESENTANTE_LEGAL", name)
+            o.Add("AC_FLD_REPRESENTANTE_LEGAL_CPF", GenerarCPFValidoDemo())
+            o.Add("AC_FLD_CNAE_CLIENTE", "4530701")
+        End If
+
+        Await Task.Yield()
+        Return o
+    End Function
+
+    ' ===== BD =====
+    Private Function ObtenerPoidPorDocumento(doc As String) As String
+        Try
+            Dim sql As String =
+"SELECT a.poid_id0 AS account_poid
+   FROM pin.account_t a
+   JOIN pin.account_nameinfo_t n ON n.obj_id0 = a.poid_id0
+   JOIN pin.ac_profile_account_t pa ON pa.obj_id0 = a.poid_id0
+  WHERE TRIM(pa.cpf_cnpj) = :p_doc
+  ORDER BY a.poid_id0 DESC
+  FETCH FIRST 1 ROWS ONLY"
+            Dim pars As New Dictionary(Of String, Object) From {{":p_doc", doc}}
+            Dim dt As DataTable = _db.ExecuteDataTable(sql, pars, 30)
+            If dt IsNot Nothing AndAlso dt.Rows.Count > 0 Then
+                Dim id As Long = Convert.ToInt64(dt.Rows(0)("account_poid"))
+                Return "0.0.0.1 /account " & id.ToString() & " 0"
+            End If
+        Catch ex As Exception
+            ErrorMessage = "ObtenerPoidPorDocumento: " & ex.Message
+            OUT("[DB][ERROR] " & ErrorMessage)
+        End Try
+        Return String.Empty
+    End Function
+
+    ' ===== Secuenciador de Protocolo =====
+    Private Function GenerateUniqueProtocolId(prefix As String) As String
+        Dim baseMax As Integer = GetMaxSuffixFromDb(prefix)
+        If baseMax < 0 Then baseMax = 0
+        Dim trySuffix As Integer = baseMax + 1
+        For attempts As Integer = 0 To 300
+            Dim candidate As String = prefix & trySuffix.ToString("0000")
+            If Not ProtocoloExiste(candidate) Then
+                OUT("[SEQ] next unique → " & candidate)
+                Return candidate
+            End If
+            trySuffix += 1
+        Next
+        Dim fallback As String = prefix & DateTime.Now.ToString("mmss")
+        OUT("[SEQ] fallback → " & fallback)
+        Return fallback
+    End Function
+
+    Private Function GetMaxSuffixFromDb(prefix As String) As Integer
+        Dim maxSuffix As Integer = -1
+        Try
+            Dim sql1 As String =
+"SELECT NVL(MAX(TO_NUMBER(REGEXP_SUBSTR(TRIM(ac_protocol_id),'([0-9]{4})$'))),0)
+   FROM pin.ac_protocol_t
+  WHERE ac_protocol_id LIKE :pfx || '%'"
+            Dim v1 As Integer = _db.ExecuteScalar(Of Integer)(sql1, New Dictionary(Of String, Object) From {{":pfx", prefix}}, 15)
+            maxSuffix = Math.Max(maxSuffix, v1)
+
+            Dim sql2 As String =
+"SELECT NVL(MAX(TO_NUMBER(REGEXP_SUBSTR(TRIM(contract_id),'([0-9]{4})$'))),0)
+   FROM pin.ac_profile_account_t
+  WHERE contract_id LIKE :pfx || '%'"
+            Dim v2 As Integer = _db.ExecuteScalar(Of Integer)(sql2, New Dictionary(Of String, Object) From {{":pfx", prefix}}, 15)
+            maxSuffix = Math.Max(maxSuffix, v2)
+
+            Dim sql3 As String =
+"SELECT NVL(MAX(TO_NUMBER(REGEXP_SUBSTR(
+       REGEXP_SUBSTR(input_json,
+         '""AC_FLD_PROTOCOL_ID""[[:space:]]*:[[:space:]]*""' || :pfx || '([0-9]{4})""',
+         1, 1, 'i', 1
+       ),
+       '([0-9]{4})$'
+     ))),0)
+   FROM pin.ac_interface_log_t
+  WHERE input_json LIKE '%' || :pfx || '%'
+    AND input_json LIKE '%AC_FLD_PROTOCOL_ID%'"
+            Dim v3 As Integer = _db.ExecuteScalar(Of Integer)(sql3, New Dictionary(Of String, Object) From {{":pfx", prefix}}, 20)
+            maxSuffix = Math.Max(maxSuffix, v3)
+
+        Catch ex As Exception
+            OUT("[SEQ][ERR] " & ex.Message)
+            Return -1
+        End Try
+
+        OUT("[SEQ] max_suf BD (prefix=" & prefix & ") = " & maxSuffix.ToString())
+        Return maxSuffix
+    End Function
+
+    Private Function ProtocoloExiste(candidate As String) As Boolean
+        Try
+            Dim sql As String =
+"SELECT CASE WHEN EXISTS (SELECT 1 FROM pin.ac_protocol_t WHERE TRIM(ac_protocol_id) = :cand)
+              OR EXISTS (SELECT 1 FROM pin.ac_profile_account_t WHERE TRIM(contract_id) = :cand)
+           THEN 1 ELSE 0 END AS existe
+  FROM dual"
+            Dim v As Integer = _db.ExecuteScalar(Of Integer)(sql, New Dictionary(Of String, Object) From {{":cand", candidate}}, 15)
+            Return (v = 1)
+        Catch
+            Return True
+        End Try
+    End Function
+
+    ' ===== Seeds =====
+    Private Structure SeedRow
+        Public Name As String
+        Public StreetType As String
+        Public StreetName As String
+        Public Neighborhood As String
+        Public City As String
+        Public UF As String
+        Public Zip As String
+        Public Phone As String
+        Public Email As String
+    End Structure
+
+    Private Shared ReadOnly _rnd As New Random()
+
+    Private Function PickSeedRow() As SeedRow
+        Dim list = LoadSeeds()
+        If list.Count = 0 Then
+            Return New SeedRow With {
+                .Name = "ORLANDO ROMERO",
+                .StreetType = "Rua",
+                .StreetName = "Odilon Auto",
+                .Neighborhood = "Jardim Carapina",
+                .City = "SERRA",
+                .UF = "ES",
+                .Zip = "29161709",
+                .Phone = "27998555123",
+                .Email = "orlando.romero@example.com"
+            }
+        End If
+        Return list(_rnd.Next(0, list.Count))
+    End Function
+
+    Private Function LoadSeeds() As System.Collections.Generic.List(Of SeedRow)
+        Dim res As New System.Collections.Generic.List(Of SeedRow)
+        Try
+            Dim path As String = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "seeds_clientes_br.csv")
+            If Not File.Exists(path) Then
+                OUT("[SEEDS] no encontrado: " & path)
+                Return res
+            End If
+            Using sr As New StreamReader(path, Encoding.UTF8)
+                Dim header As String = sr.ReadLine() ' salta cabecera
+                While Not sr.EndOfStream
+                    Dim line As String = sr.ReadLine()
+                    If String.IsNullOrWhiteSpace(line) Then Continue While
+                    Dim cols = ParseCsvLine(line)
+                    If cols.Length >= 9 Then
+                        Dim s As New SeedRow With {
+                            .Name = cols(0),
+                            .StreetType = cols(1),
+                            .StreetName = cols(2),
+                            .Neighborhood = cols(3),
+                            .City = cols(4),
+                            .UF = cols(5),
+                            .Zip = cols(6),
+                            .Phone = cols(7),
+                            .Email = cols(8)
+                        }
+                        res.Add(s)
+                    End If
+                End While
+            End Using
+            OUT("[SEEDS] Cargadas: " & res.Count.ToString())
+        Catch ex As Exception
+            OUT("[SEEDS][ERROR] " & ex.Message)
+        End Try
+        Return res
+    End Function
+
+    Private Function ParseCsvLine(line As String) As String()
+        Dim vals As New System.Collections.Generic.List(Of String)
+        Dim sb As New StringBuilder()
+        Dim inQ As Boolean = False
+        For i As Integer = 0 To line.Length - 1
+            Dim ch As Char = line(i)
+            If ch = """"c Then
+                inQ = Not inQ
+            ElseIf ch = ","c AndAlso Not inQ Then
+                vals.Add(sb.ToString())
+                sb.Clear()
+            Else
+                sb.Append(ch)
+            End If
+        Next
+        vals.Add(sb.ToString())
+        Return vals.ToArray()
+    End Function
+
+    Private Function SoloDigitos(s As String) As String
+        If s Is Nothing Then Return ""
+        Dim sb As New StringBuilder()
+        For Each c As Char In s
+            If Char.IsDigit(c) Then sb.Append(c)
+        Next
+        Return sb.ToString()
+    End Function
+
+    Private Function GenerarCPFValidoDemo() As String
+        Dim nums(8) As Integer
+        For i As Integer = 0 To 8 : nums(i) = _rnd.Next(0, 10) : Next
+        Dim d1 As Integer = 0
+        For i As Integer = 0 To 8 : d1 += nums(i) * (10 - i) : Next
+        d1 = 11 - (d1 Mod 11) : If d1 >= 10 Then d1 = 0
+        Dim d2 As Integer = 0
+        For i As Integer = 0 To 8 : d2 += nums(i) * (11 - i) : Next
+        d2 += d1 * 2
+        d2 = 11 - (d2 Mod 11) : If d2 >= 10 Then d2 = 0
+        Dim sb As New StringBuilder()
+        For i As Integer = 0 To 8 : sb.Append(nums(i).ToString()) : Next
+        sb.Append(d1.ToString()).Append(d2.ToString())
+        Return sb.ToString()
+    End Function
+
+    Private Function GenerarCNPJValidoDemo() As String
+        Dim nums(11) As Integer
+        For i As Integer = 0 To 11 : nums(i) = _rnd.Next(0, 10) : Next
+        Dim pesos1 = New Integer() {5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2}
+        Dim sum1 As Integer = 0
+        For i As Integer = 0 To 11 : sum1 += nums(i) * pesos1(i) : Next
+        Dim d1 As Integer = sum1 Mod 11 : d1 = If(d1 < 2, 0, 11 - d1)
+        Dim pesos2 = New Integer() {6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2}
+        Dim sum2 As Integer = d1 * 2
+        For i As Integer = 0 To 11 : sum2 += nums(i) * pesos2(i + 1) : Next
+        Dim d2 As Integer = sum2 Mod 11 : d2 = If(d2 < 2, 0, 11 - d2)
+        Dim sb As New StringBuilder()
+        For i As Integer = 0 To 11 : sb.Append(nums(i).ToString()) : Next
+        sb.Append(d1.ToString()).Append(d2.ToString())
+        Return sb.ToString()
+    End Function
+
+End Class
