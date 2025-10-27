@@ -7,15 +7,6 @@ Imports System.Text
 Imports System.Threading.Tasks
 Imports Newtonsoft.Json.Linq
 
-Public Class BolecodeResponseResult
-    Public Property Success As Boolean
-    Public Property AccountPoid As String
-    Public Property Token As String
-    Public Property ParId As String
-    Public Property HttpStatus As Integer?
-    Public Property RawBody As String
-End Class
-
 Public Class BolecodeResponse
 
     ' ===== Config =====

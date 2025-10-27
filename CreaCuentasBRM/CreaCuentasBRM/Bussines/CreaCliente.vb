@@ -10,16 +10,6 @@ Imports System.Data
 Imports Newtonsoft.Json
 Imports Newtonsoft.Json.Linq
 
-' ===== Resultado =====
-Public Class CrearClienteResult
-    Public Property Success As Boolean
-    Public Property AccountPoid As String            ' "0.0.0.1 /account <id> 0"
-    Public Property Documento As String              ' CPF/CNPJ
-    Public Property ProtocolId As String             ' ORACLE_SAP_TEST_####
-    Public Property HttpStatus As Integer?
-    Public Property RawBody As String
-End Class
-
 ' ===== Servicio =====
 Public Class CreaCliente
 
@@ -355,39 +345,6 @@ Public Class CreaCliente
         For Each c As Char In s
             If Char.IsDigit(c) Then sb.Append(c)
         Next
-        Return sb.ToString()
-    End Function
-
-    Private Function GenerarCPFValidoDemo() As String
-        Dim nums(8) As Integer
-        For i As Integer = 0 To 8 : nums(i) = _rnd.Next(0, 10) : Next
-        Dim d1 As Integer = 0
-        For i As Integer = 0 To 8 : d1 += nums(i) * (10 - i) : Next
-        d1 = 11 - (d1 Mod 11) : If d1 >= 10 Then d1 = 0
-        Dim d2 As Integer = 0
-        For i As Integer = 0 To 8 : d2 += nums(i) * (11 - i) : Next
-        d2 += d1 * 2
-        d2 = 11 - (d2 Mod 11) : If d2 >= 10 Then d2 = 0
-        Dim sb As New StringBuilder()
-        For i As Integer = 0 To 8 : sb.Append(nums(i).ToString()) : Next
-        sb.Append(d1.ToString()).Append(d2.ToString())
-        Return sb.ToString()
-    End Function
-
-    Private Function GenerarCNPJValidoDemo() As String
-        Dim nums(11) As Integer
-        For i As Integer = 0 To 11 : nums(i) = _rnd.Next(0, 10) : Next
-        Dim pesos1 = New Integer() {5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2}
-        Dim sum1 As Integer = 0
-        For i As Integer = 0 To 11 : sum1 += nums(i) * pesos1(i) : Next
-        Dim d1 As Integer = sum1 Mod 11 : d1 = If(d1 < 2, 0, 11 - d1)
-        Dim pesos2 = New Integer() {6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2}
-        Dim sum2 As Integer = d1 * 2
-        For i As Integer = 0 To 11 : sum2 += nums(i) * pesos2(i + 1) : Next
-        Dim d2 As Integer = sum2 Mod 11 : d2 = If(d2 < 2, 0, 11 - d2)
-        Dim sb As New StringBuilder()
-        For i As Integer = 0 To 11 : sb.Append(nums(i).ToString()) : Next
-        sb.Append(d1.ToString()).Append(d2.ToString())
         Return sb.ToString()
     End Function
 
