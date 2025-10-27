@@ -37,6 +37,18 @@ Public Class CreaCliente
     Private Shared ReadOnly _http As HttpClient = New HttpClient() With {.Timeout = TimeSpan.FromSeconds(30)}
     Private ReadOnly _db As BrmOracleQuery = New BrmOracleQuery()
 
+    ' ===== Logging =====
+    Private _logger As IAppLogger
+
+    Public Property Logger As IAppLogger
+        Get
+            Return _logger
+        End Get
+        Set(value As IAppLogger)
+            _logger = value
+        End Set
+    End Property
+
     ' ===== Telemetría/OUT =====
     Public Property LastRequestJson As String
     Public Property LastResponseBody As String
@@ -63,6 +75,7 @@ Public Class CreaCliente
             Dim payload As JObject = Await BuildPayloadAsync(tipo, ufPreferida).ConfigureAwait(False)
             Dim json As String = payload.ToString(Formatting.None)
             LastRequestJson = json
+            LogRequest(json)
             OUT(">>> [CREATE][JSON]")
             OUT(LastRequestJson)
 
