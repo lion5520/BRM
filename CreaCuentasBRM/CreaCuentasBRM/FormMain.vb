@@ -70,7 +70,7 @@ Public Class FormMain
 
                 ' Crear
                 AppendDebug("[DEBUG] [CREATE] Llamando CreaCliente…")
-                Dim rc = Await _creador.CrearAsync(tipoCliente, Nothing, doPersist)
+                Dim rc As CrearClienteResult = Await _creador.CrearAsync(tipoCliente, Nothing, doPersist)
                 If rc Is Nothing OrElse Not rc.Success Then
                     AppendDebug("[DEBUG] [ABORT] " & If(String.IsNullOrWhiteSpace(_creador.ErrorMessage),
                                                          "No se pudo crear el cliente. Proceso detenido.",
@@ -94,7 +94,7 @@ Public Class FormMain
 
                 ' Comprar
                 AppendDebug("[DEBUG] [PURCHASE] Llamando CompraProductos…")
-                Dim rb = Await _comprador.ComprarAsync(rc.AccountPoid, pay, doPersist, Nothing)
+                Dim rb As CompraProductosResponse = Await _comprador.ComprarAsync(rc.AccountPoid, pay, doPersist, Nothing)
                 If rb Is Nothing OrElse Not rb.Success Then
                     AppendDebug("[DEBUG] [ABORT] " & If(String.IsNullOrWhiteSpace(_comprador.ErrorMessage),
                                                          "No se pudo realizar la compra. Proceso detenido.",
@@ -107,7 +107,7 @@ Public Class FormMain
 
                 ' Bolecode
                 AppendDebug("[DEBUG] [PAYMENT] Llamando BolecodeResponse…")
-                Dim rp = Await _bole.ActualizarAsync(rc.AccountPoid, doPersist)
+                Dim rp As BolecodeResponseResult = Await _bole.ActualizarAsync(rc.AccountPoid, doPersist)
                 If rp Is Nothing OrElse Not rp.Success Then
                     AppendDebug("[DEBUG] [ABORT] " & If(String.IsNullOrWhiteSpace(_bole.ErrorMessage),
                                                          "No se pudo actualizar bolecode. Proceso detenido.",

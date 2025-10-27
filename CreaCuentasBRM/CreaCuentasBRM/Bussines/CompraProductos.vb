@@ -45,9 +45,9 @@ Public Class CompraProductos
     Public Async Function ComprarAsync(accountPoid As String,
                                        tipo As PayType,
                                        Optional persist As Boolean = True,
-                                       Optional payTypeOverride As Integer? = Nothing) As Task(Of CompraProductosResult)
+                                       Optional payTypeOverride As Integer? = Nothing) As Task(Of CompraProductosResponse)
 
-        Dim r As New CompraProductosResult With {.AccountPoid = accountPoid}
+        Dim r As New CompraProductosResponse With {.AccountPoid = accountPoid}
 
         Try
             Dim poid As String = NormalizarAccountPoid(accountPoid)

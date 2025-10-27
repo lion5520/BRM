@@ -128,7 +128,7 @@
     <Compile Include="Bussines\BolecodeResponse.vb" />
     <Compile Include="Bussines\BolecodeResponseResult.vb" />
     <Compile Include="Bussines\CompraProductos.vb" />
-    <Compile Include="Bussines\CompraProductosResult.vb" />
+    <Compile Include="Bussines\CompraProductosResponse.vb" />
     <Compile Include="Bussines\CreaCliente.vb" />
     <Compile Include="Bussines\CrearClienteResult.vb" />
     <Compile Include="Helpers\CreaCliente.MissingMembers.vb" />
