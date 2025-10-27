@@ -9,16 +9,6 @@ Imports System.Data
 Imports Newtonsoft.Json
 Imports Newtonsoft.Json.Linq
 
-Public Class CompraProductosResult
-    Public Property Success As Boolean
-    Public Property AccountPoid As String
-    Public Property ProtocolId As String
-    Public Property ContractId As String
-    Public Property Terminal As String
-    Public Property HttpStatus As Integer?
-    Public Property RawBody As String
-End Class
-
 Public Class CompraProductos
 
     Public Enum PayType
