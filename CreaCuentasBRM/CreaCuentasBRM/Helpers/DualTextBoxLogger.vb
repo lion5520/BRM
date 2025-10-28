@@ -93,7 +93,11 @@ Namespace Helpers
 
         Public Sub LogJson(json As String, Optional label As String = Nothing) Implements IAppLogger.LogJson
             Dim pretty As String = FormatJson(json)
-            Dim tag As String = "<JSON" & If(String.IsNullOrWhiteSpace(label), String.Empty, " label=\"" & label & "\"") & ">"
+            Dim tag As String = "<JSON"
+            If Not String.IsNullOrWhiteSpace(label) Then
+                tag &= " label=\"" & label & "\""
+            End If
+            tag &= ">"
             Dim footer As String = "</JSON>"
             AppendBlock(_dataTextBox, tag, pretty, footer, True, True, _dataMaxLines)
         End Sub
