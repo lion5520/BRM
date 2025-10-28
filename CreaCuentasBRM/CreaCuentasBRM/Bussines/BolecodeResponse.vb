@@ -15,6 +15,7 @@ Public Class BolecodeResponse
     Private Const PATH As String = "/BRMCustCustomServices/resources/BRMPaymentCustomServicesREST/bolecodeResponse"
     Private Const TOKEN_PREFIX As String = "03395942"
     Private Const TOKEN_SEED As String = "03395942700000000109019716900000001038855000"
+    Private Const TYPEABLE_SEED As String = "03399356782060000000201234501011693970000000100"
     Private Const PAYTYPE_BOLETO As Integer = 2
     Private Const PAYTYPE_DAC As Integer = 3
 
@@ -102,16 +103,24 @@ Public Class BolecodeResponse
                 OUT("[BOLECODE][DB] Tokens existentes reutilizados TOKEN_BOLETO=" & boletoToken & " PIX_TOKEN=" & pixToken)
             End If
 
-            Dim tokenEfectivo As String = If(String.IsNullOrWhiteSpace(boletoToken), TOKEN_SEED, boletoToken.Trim())
+            Dim tokenEfectivo As String = NormalizarToken(boletoToken)
+            Dim barCode As String = NormalizarCodigoBarras(tokenEfectivo)
+            Dim typeableLine As String = GenerarLineaDigitavel(barCode)
+            If String.IsNullOrWhiteSpace(typeableLine) Then
+                typeableLine = TYPEABLE_SEED
+            End If
+
             Dim parIdEfectivo As String = If(String.IsNullOrWhiteSpace(parId), String.Empty, parId)
+
+            OUT("[BOLECODE][PAYLOAD] token=" & tokenEfectivo & " bar_code=" & barCode & " typeable_line=" & typeableLine)
 
             Dim payload As New JObject From {
                 {"token", tokenEfectivo},
                 {"id", parIdEfectivo},
                 {"origin", "brmnf"},
                 {"status", "valid"},
-                {"bar_code", tokenEfectivo},
-                {"typeable_line", tokenEfectivo},
+                {"bar_code", barCode},
+                {"typeable_line", typeableLine},
                 {"our_number", "0000000042398"},
                 {"gateway_boleto", "santander"},
                 {"qr_code", "0002010102122692..."},
@@ -226,6 +235,88 @@ Public Class BolecodeResponse
         End If
 
         Return IncrementAllDigits(trimmed)
+    End Function
+
+    Private Shared Function NormalizarToken(token As String) As String
+        Dim limpio As String = If(token, String.Empty).Trim()
+        If String.IsNullOrWhiteSpace(limpio) Then
+            Return TOKEN_SEED
+        End If
+
+        If Not EsNumerico(limpio) Then
+            Return TOKEN_SEED
+        End If
+
+        If limpio.Length <> 44 Then
+            Return TOKEN_SEED
+        End If
+
+        Return limpio
+    End Function
+
+    Private Shared Function NormalizarCodigoBarras(token As String) As String
+        Dim limpio As String = If(token, String.Empty).Trim()
+        If EsCodigoBarrasValido(limpio) Then
+            Return limpio
+        End If
+        Return TOKEN_SEED
+    End Function
+
+    Private Shared Function EsCodigoBarrasValido(codigo As String) As Boolean
+        If String.IsNullOrWhiteSpace(codigo) Then Return False
+        If codigo.Length <> 44 Then Return False
+        Return EsNumerico(codigo)
+    End Function
+
+    Private Shared Function EsNumerico(valor As String) As Boolean
+        If String.IsNullOrWhiteSpace(valor) Then Return False
+        For Each ch As Char In valor
+            If Not Char.IsDigit(ch) Then
+                Return False
+            End If
+        Next
+        Return True
+    End Function
+
+    Private Shared Function GenerarLineaDigitavel(barcode As String) As String
+        If Not EsCodigoBarrasValido(barcode) Then Return String.Empty
+
+        Try
+            Dim campo1SemDv As String = barcode.Substring(0, 4) & barcode.Substring(19, 5)
+            Dim campo2SemDv As String = barcode.Substring(24, 10)
+            Dim campo3SemDv As String = barcode.Substring(34, 10)
+            Dim campo4 As String = barcode.Substring(4, 1)
+            Dim campo5 As String = barcode.Substring(5, 14)
+
+            Dim campo1 As String = campo1SemDv & CalcularDigitoModulo10(campo1SemDv).ToString()
+            Dim campo2 As String = campo2SemDv & CalcularDigitoModulo10(campo2SemDv).ToString()
+            Dim campo3 As String = campo3SemDv & CalcularDigitoModulo10(campo3SemDv).ToString()
+
+            Return campo1 & campo2 & campo3 & campo4 & campo5
+        Catch
+            Return String.Empty
+        End Try
+    End Function
+
+    Private Shared Function CalcularDigitoModulo10(valor As String) As Integer
+        Dim suma As Integer = 0
+        Dim multiplicador As Integer = 2
+
+        For i As Integer = valor.Length - 1 To 0 Step -1
+            Dim digito As Integer = AscW(valor(i)) - AscW("0"c)
+            Dim producto As Integer = digito * multiplicador
+            If producto >= 10 Then
+                suma += (producto \ 10) + (producto Mod 10)
+            Else
+                suma += producto
+            End If
+
+            multiplicador = If(multiplicador = 2, 1, 2)
+        Next
+
+        Dim resto As Integer = suma Mod 10
+        Dim dv As Integer = (10 - resto) Mod 10
+        Return dv
     End Function
 
     Private Shared Function IncrementAllDigits(value As String) As String
