@@ -132,7 +132,7 @@
     <Compile Include="Bussines\CreaCliente.vb" />
     <Compile Include="Bussines\CrearClienteResult.vb" />
     <Compile Include="Helpers\CreaCliente.MissingMembers.vb" />
-    <Compile Include="Helpers\UiTextBoxLogger.vb" />
+    <Compile Include="Helpers\DualTextBoxLogger.vb" />
     <Compile Include="JSON\CreaCliente.LogJson.vb" />
     <Compile Include="JSON\JsonLogHelper.vb" />
     <Compile Include="JSON\RestJsonClient.vb" />
@@ -200,7 +200,9 @@
       <SubType>Designer</SubType>
     </None>
     <None Include="packages.config" />
-    <Content Include="seeds_clientes_br.csv" />
+    <Content Include="seeds_clientes_br.csv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.VisualBasic.targets" />

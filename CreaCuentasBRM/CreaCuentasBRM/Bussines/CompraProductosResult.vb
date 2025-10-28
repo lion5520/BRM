@@ -1,7 +1,7 @@
 ﻿Option Strict On
 Option Explicit On
 
-Public Class CompraProductosResult
+Public NotInheritable Class CompraProductosResult
     Public Property Success As Boolean
     Public Property AccountPoid As String
     Public Property ProtocolId As String

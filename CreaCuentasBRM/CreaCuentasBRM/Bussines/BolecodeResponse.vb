@@ -17,6 +17,17 @@ Public Class BolecodeResponse
     Private Shared ReadOnly _http As HttpClient = New HttpClient() With {.Timeout = TimeSpan.FromSeconds(30)}
     Private ReadOnly _db As BrmOracleQuery = New BrmOracleQuery()
 
+    Private _logger As IAppLogger
+
+    Public Property Logger As IAppLogger
+        Get
+            Return _logger
+        End Get
+        Set(value As IAppLogger)
+            _logger = value
+        End Set
+    End Property
+
     ' ===== Telemetría/OUT =====
     Public Property LastRequestJson As String
     Public Property LastResponseBody As String
@@ -64,14 +75,15 @@ Public Class BolecodeResponse
             }
             Dim json As String = payload.ToString()
             LastRequestJson = json
-            OUT(">>> [BOLECODE][JSON]")
-            OUT(LastRequestJson)
+            OUT(">>> [BOLECODE][JSON] payload disponible en Log_Debug.")
+            LogJsonToLogger("BOLECODE_REQUEST", json)
 
             If Not persist Then
                 r.Success = True
                 r.Token = token
                 r.ParId = parId
                 OUT("[BOLECODE][DRY-RUN] persist=False, POST omitido.")
+                LogInfoToLogger("BOLECODE_DRYRUN", "[BOLECODE][DRY-RUN] persist=False, POST omitido.")
                 Return r
             End If
 
@@ -87,8 +99,9 @@ Public Class BolecodeResponse
                     LastResponseBody = body
 
                     OUT("<<< [BOLECODE][HTTP] " & LastHttpStatus.GetValueOrDefault().ToString())
-                    OUT("<<< [BOLECODE][RESP]")
-                    OUT(LastResponseBody)
+                    OUT("<<< [BOLECODE][RESP] respuesta disponible en Log_Debug.")
+                    LogInfoToLogger("BOLECODE_HTTP", "<<< [BOLECODE][HTTP] " & LastHttpStatus.GetValueOrDefault().ToString())
+                    LogJsonToLogger("BOLECODE_RESPONSE", body)
 
                     r.Success = (LastHttpStatus.HasValue AndAlso LastHttpStatus.Value >= 200 AndAlso LastHttpStatus.Value < 300)
                     r.Token = token
@@ -101,6 +114,13 @@ Public Class BolecodeResponse
         Catch ex As Exception
             ErrorMessage = ex.Message
             OUT("[BOLECODE][ERROR] " & ErrorMessage)
+            LogInfoToLogger("BOLECODE_ERROR", "[BOLECODE][ERROR] " & ErrorMessage)
+            If _logger IsNot Nothing Then
+                Try
+                    _logger.LogError(ErrorMessage, ex, New With {.Operacion = "BolecodeResponse"})
+                Catch
+                End Try
+            End If
             r.Success = False
             r.HttpStatus = LastHttpStatus
             r.RawBody = LastResponseBody
@@ -157,5 +177,27 @@ Public Class BolecodeResponse
         End If
         Return s
     End Function
+
+    Private Sub LogInfoToLogger(scope As String, message As String)
+        If _logger Is Nothing OrElse String.IsNullOrWhiteSpace(message) Then Return
+        Try
+            _logger.LogData(message, scope)
+        Catch
+        End Try
+    End Sub
+
+    Private Sub LogJsonToLogger(scope As String, json As String)
+        If _logger Is Nothing OrElse String.IsNullOrWhiteSpace(json) Then Return
+        Try
+            Dim pretty As String
+            Try
+                pretty = JObject.Parse(json).ToString()
+            Catch
+                pretty = json
+            End Try
+            _logger.LogJson(pretty, scope)
+        Catch
+        End Try
+    End Sub
 
 End Class
