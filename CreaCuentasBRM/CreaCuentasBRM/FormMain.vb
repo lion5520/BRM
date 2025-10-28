@@ -139,17 +139,22 @@ Public Class FormMain
                     ProgressBar_general.Refresh()
                 End If
 
-                Dim pay As CompraProductos.PayType = CompraProductos.PayType.Boleto
-                If ComboBox_ProductoTPO IsNot Nothing AndAlso ComboBox_ProductoTPO.SelectedItem IsNot Nothing Then
-                    Dim p As String = ComboBox_ProductoTPO.SelectedItem.ToString().Trim().ToUpperInvariant()
-                    Select Case p
-                        Case "CREDITCARD", "CREDIT CARD", "CC"
-                            pay = CompraProductos.PayType.CreditCard
-                        Case "DAC"
-                            pay = CompraProductos.PayType.DAC
-                        Case Else
-                            pay = CompraProductos.PayType.Boleto
-                    End Select
+                Dim pay As CompraProductos.PayType? = Nothing
+                Dim paySelection As String = ComboBox_ProductoTPO?.Text
+                If Not String.IsNullOrWhiteSpace(paySelection) Then
+                    Dim p As String = paySelection.Trim().ToUpperInvariant()
+                    If p <> "ALEATORIO" AndAlso p <> "ALEATORIA" AndAlso p <> "RANDOM" Then
+                        Select Case p
+                            Case "CREDITCARD", "CREDIT CARD", "CC"
+                                pay = CompraProductos.PayType.CreditCard
+                            Case "DAC"
+                                pay = CompraProductos.PayType.DAC
+                            Case "BOLETO"
+                                pay = CompraProductos.PayType.Boleto
+                            Case Else
+                                pay = CompraProductos.PayType.Boleto
+                        End Select
+                    End If
                 End If
 
                 AppendDebug("[DEBUG] [PURCHASE] Llamando CompraProductos…")

@@ -14,9 +14,9 @@ Imports Newtonsoft.Json.Linq
 Public Class CompraProductos
 
     Public Enum PayType
-        CreditCard = 1  ' → PIN_FLD_PAY_TYPE = -1
-        Boleto = 2      ' → -2
-        DAC = 3         ' → -3
+        CreditCard = 1  ' → PIN_FLD_PAY_TYPE = 1
+        Boleto = 2      ' → 2
+        DAC = 3         ' → 3
     End Enum
 
     ' ===== Config =====
@@ -24,10 +24,477 @@ Public Class CompraProductos
     Private Const PATH_PURCHASE As String = "/BRMCustCustomServices/resources/BRMPurchaseCustomServicesREST/PurchasePlans"
     Private Const PROTOCOL_PREFIX As String = "ORACLE_SAP_TEST_"
     Private Const CONTRACT_PREFIX As String = "TP_"
+    Private Const VALIDATION_MAX_ATTEMPTS As Integer = 5
+    Private Shared ReadOnly VALIDATION_DELAY As TimeSpan = TimeSpan.FromSeconds(2)
 
     ' ===== Dependencias =====
     Private Shared ReadOnly _http As HttpClient = New HttpClient() With {.Timeout = TimeSpan.FromSeconds(30)}
     Private ReadOnly _db As BrmOracleQuery = New BrmOracleQuery()
+
+    Private Shared ReadOnly _creditCardTemplate As JObject = JObject.Parse(
+"{" &
+"\n    \"PIN_FLD_POID\":\"0.0.0.1 /account 505566556 0\"," &
+"\n    \"PIN_FLD_BILLINFO_OBJ\":\"0.0.0.1 /billinfo -1 0\"," &
+"\n    \"PIN_FLD_PAY_TYPE\":1," &
+"\n    \"AC_FLD_PROTOCOL_ID\": \"ORACLE_SAP_004\"," &
+"\n    \"AC_FLD_NSU_CIELO\": \"123456\"," &
+"\n    \"AC_FLD_REASON_CODE\":\"1\"," &
+"\n    \"AC_FLD_PURCHASE_SOURCE\" : \"Testes Oracle SAP\"," &
+"\n    \"AC_FLD_TRANSACTION_ID\" : \"1\"," &
+"\n    \"AC_FLD_AUTHORIZATION_NO\" : \"zEFkNK01J4SM96HNZEFKNKFEE0NV01ZY\"," &
+"\n    \"AC_FLD_PARCELA\": 1," &
+"\n    \"AC_FLD_CONTRACT_ID\": \"TP_ORACLE_SAP_004\"," &
+"\n    \"AC_FLD_STR_COD_TERMINAL\": \"\"," &
+"\n    \"PIN_FLD_PAYINFO\": [" &
+"\n        {" &
+"\n            \"PIN_FLD_POID\": \"0.0.0.1 /payinfo -1 0\"," &
+"\n            \"AC_FLD_CC_INFO\": {" &
+"\n                \"PIN_FLD_DEBIT_NUM\" : \"Hm90XC01JZ6D31KWHM90XCBBNT5ZMKV4\"," &
+"\n                \"AC_FLD_IS_HUB\" : \"True\"," &
+"\n                \"AC_FLD_CC_PROVIDER\" : \"12\"," &
+"\n                \"AC_FLD_DEBIT_MASKED_NUM\" : \"8883\"" &
+"\n            }" &
+"\n        }" &
+"\n    ]," &
+"\n   \"PIN_FLD_PRODUCTS\":[" &
+"\n       {" &
+"\n          \"PIN_FLD_PRODUCT_OBJ\":\"Banda Larga\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"8023h000007FvRAAA0\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Fibra 600 Mega\"," &
+"\n          \"CYCLE_FEE_AMT\":6057," &
+"\n          \"CYCLE_START_T\":\"0\"," &
+"\n          \"AC_FLD_COD_ANATEL\":\"SCM004\"," &
+"\n          \"AC_FLD_ID_OFERTA\":\"BL_600_OFFER\"," &
+"\n          \"AC_FLD_FLAG_VISIBILITY\":1," &
+"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"BL_600MB\"," &
+"\n          \"AC_FLD_VELOCITY\":\"600\"," &
+"\n          \"AC_FLD_FIDELIZACAO\" : \"Fidelização Anual\"" &
+"\n       }," &
+"\n       {" &
+"\n          \"PIN_FLD_PRODUCT_OBJ\":\"SVA\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"8023h000004Te39AAC\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Nio Expert Presencial\"," &
+"\n          \"CYCLE_FEE_AMT\":1490," &
+"\n          \"AC_FLD_COD_ANATEL\":\"Anatel_SVA\"," &
+"\n          \"AC_FLD_ID_OFERTA\":\"Fibra_SVA\"," &
+"\n          \"AC_ID_OFERTA\":\"1\"," &
+"\n          \"AC_FLD_FLAG_VISIBILITY\" : \"1\"," &
+"\n          \"AC_FLD_FLAG_EMBARCADO\":\"Embarcado\"," &
+"\n          \"AC_FLD_INCIDENCIA\":\"Banda Larga\"," &
+"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"EXP_CSA\"" &
+"\n       }," &
+"\n       {" &
+"\n          \"PIN_FLD_PRODUCT_OBJ\":\"SVA\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"8023h000007NgtrAAC\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Nio News Estadão\"," &
+"\n          \"CYCLE_FEE_AMT\":399," &
+"\n          \"AC_FLD_COD_ANATEL\":\"Anatel_SVA\"," &
+"\n          \"AC_FLD_ID_OFERTA\":\"Fibra_SVA\"," &
+"\n          \"AC_ID_OFERTA\":\"1\"," &
+"\n          \"AC_FLD_FLAG_VISIBILITY\" : \"1\"," &
+"\n          \"AC_FLD_FLAG_EMBARCADO\":\"Embarcado\"," &
+"\n          \"AC_FLD_INCIDENCIA\":\"Banda Larga\"," &
+"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"SVA_NEWS_ESTD\"" &
+"\n       }," &
+"\n       {" &
+"\n          \"PIN_FLD_PRODUCT_OBJ\":\"SVA\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"8023h000007InNPAA0\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Nio News Isto É\"," &
+"\n          \"CYCLE_FEE_AMT\":1070," &
+"\n          \"AC_FLD_COD_ANATEL\":\"Anatel_SVA\"," &
+"\n          \"AC_FLD_ID_OFERTA\":\"Fibra_SVA\"," &
+"\n          \"AC_ID_OFERTA\":\"1\"," &
+"\n          \"AC_FLD_FLAG_VISIBILITY\" : \"1\"," &
+"\n          \"AC_FLD_FLAG_EMBARCADO\":\"Embarcado\"," &
+"\n          \"AC_FLD_INCIDENCIA\":\"Banda Larga\"," &
+"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"SVA_NEWS_IE\"" &
+"\n       }," &
+"\n       {" &
+"\n          \"PIN_FLD_PRODUCT_OBJ\":\"SVA\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"8023h000007IdJIAA0\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Nio News O Dia\"," &
+"\n          \"CYCLE_FEE_AMT\":199," &
+"\n          \"AC_FLD_COD_ANATEL\":\"Anatel_SVA\"," &
+"\n          \"AC_FLD_ID_OFERTA\":\"Fibra_SVA\"," &
+"\n          \"AC_ID_OFERTA\":\"1\"," &
+"\n          \"AC_FLD_FLAG_VISIBILITY\" : \"1\"," &
+"\n          \"AC_FLD_FLAG_EMBARCADO\":\"Embarcado\"," &
+"\n          \"AC_FLD_INCIDENCIA\":\"Banda Larga\"," &
+"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"SVA_NEWS_ODIA\"" &
+"\n       }," &
+"\n       {" &
+"\n          \"PIN_FLD_PRODUCT_OBJ\":\"SVA\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"8023h000005Kk1CAAS\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Nio Notícias\"," &
+"\n          \"CYCLE_FEE_AMT\":560," &
+"\n          \"AC_FLD_COD_ANATEL\":\"Anatel_SVA\"," &
+"\n          \"AC_FLD_ID_OFERTA\":\"Fibra_SVA\"," &
+"\n          \"AC_ID_OFERTA\":\"1\"," &
+"\n          \"AC_FLD_FLAG_VISIBILITY\" : \"1\"," &
+"\n          \"AC_FLD_FLAG_EMBARCADO\":\"Embarcado\"," &
+"\n          \"AC_FLD_INCIDENCIA\":\"Banda Larga\"," &
+"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"OI_NTC\"" &
+"\n       }," &
+"\n       {" &
+"\n          \"PIN_FLD_PRODUCT_OBJ\":\"Oi Play\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"8023h000007B810AAC\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Nio Play Básico\"," &
+"\n          \"CYCLE_FEE_AMT\":0," &
+"\n          \"AC_FLD_COD_ANATEL\":\"Anatel_SVA\"," &
+"\n          \"AC_FLD_ID_OFERTA\":\"Fibra_SVA\"," &
+"\n          \"AC_ID_OFERTA\":\"1\"," &
+"\n          \"AC_FLD_FLAG_VISIBILITY\" : \"1\"," &
+"\n          \"AC_FLD_FLAG_EMBARCADO\":\"Embarcado\"," &
+"\n          \"AC_FLD_INCIDENCIA\":\"Banda Larga\"," &
+"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"OI_PLY_BSC\"" &
+"\n       }," &
+"\n   {" &
+"\n          \"PIN_FLD_PRODUCT_OBJ\":\"SVA\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"802U6000000kTX8IAM\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"1 Ponto Extra Wi-Fi 5\"," &
+"\n          \"CYCLE_FEE_AMT\":2646," &
+"\n          \"AC_FLD_COD_ANATEL\" : \"\"," &
+"\n          \"AC_FLD_FLAG_VISIBILITY\" : \"1\"," &
+"\n          \"AC_FLD_FLAG_EMBARCADO\":\"Avulso\"," &
+"\n          \"AC_FLD_INCIDENCIA\":\"Banda Larga\"," &
+"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"FIBRAX_MESH_1AP\"" &
+"\n       }," &
+"\n   {" &
+"\n          \"PIN_FLD_PRODUCT_OBJ\" : \"VoIP\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_ID\" : \"80288000006BmXOAA0\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Nio Fixo Fibra\"," &
+"\n          \"CYCLE_FEE_AMT\":2990," &
+"\n          \"AC_FLD_COD_ANATEL\" : \"STFC001_002_003\"," &
+"\n          \"AC_FLD_FLAG_VISIBILITY\" : \"1\"," &
+"\n          \"AC_FLD_FLAG_EMBARCADO\" : \"Avulso\"," &
+"\n          \"AC_FLD_CAT_PRODUCT_ID\" : \"VOIP_FIXOILIMITADO\"," &
+"\n          \"AC_FLD_STR_COD_TERMINAL\" : \"3144806269\"" &
+"\n       }," &
+"\n   {" &
+"\n          \"PIN_FLD_PRODUCT_OBJ\":\"SVOD\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"802U600000F9hy9IAB\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Paramount+\"," &
+"\n          \"CYCLE_FEE_AMT\":0," &
+"\n          \"AC_FLD_COD_ANATEL\":\"\"," &
+"\n          \"AC_FLD_ID_OFERTA\":\"BL_600_OFFER\"," &
+"\n          \"AC_ID_OFERTA\":\"1\"," &
+"\n          \"AC_FLD_FLAG_VISIBILITY\" : \"1\"," &
+"\n          \"AC_FLD_FLAG_EMBARCADO\":\"\"," &
+"\n          \"AC_FLD_INCIDENCIA\":\"Banda Larga\"," &
+"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"PRMNT_PLUS\"" &
+"\n       }" &
+"\n    ]" &
+"\n }")
+
+    Private Shared ReadOnly _boletoTemplate As JObject = JObject.Parse(
+"{" &
+"\n    \"PIN_FLD_POID\":\"0.0.0.1 /account 540919636 0\"," &
+"\n    \"PIN_FLD_BILLINFO_OBJ\":\"0.0.0.1 /billinfo -1 0\"," &
+"\n    \"PIN_FLD_PAY_TYPE\":2," &
+"\n    \"AC_FLD_PROTOCOL_ID\": \"ORACLE_SAP_001\"," &
+"\n    \"AC_FLD_NSU_CIELO\":\"12301\"," &
+"\n    \"AC_FLD_REASON_CODE\":\"1\"," &
+"\n    \"AC_FLD_PURCHASE_SOURCE\" : \"Testes Oracle SAP\"," &
+"\n    \"AC_FLD_TRANSACTION_ID\":\"1234501\"," &
+"\n    \"AC_FLD_AUTHORIZATION_NO\":\"1234501\"," &
+"\n    \"AC_FLD_PARCELA\":1," &
+"\n    \"AC_FLD_CONTRACT_ID\": \"TP_ORACLE_SAP_001\"," &
+"\n    \"AC_FLD_STR_COD_TERMINAL\": \"\"," &
+"\n    \"PIN_FLD_PAYINFO\":[" &
+"\n       {" &
+"\n          \"PIN_FLD_POID\":\"0.0.0.1 /payinfo -1 0\"," &
+"\n          \"AC_FLD_PAYINFO_BOLETO\":{" &
+"\n             \"AC_FLD_AGENT_ID\":\"0\"" &
+"\n          }" &
+"\n       }" &
+"\n    ]," &
+"\n    \"PIN_FLD_PRODUCTS\":[" &
+"\n       {" &
+"\n          \"PIN_FLD_PRODUCT_OBJ\":\"Banda Larga\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"8023h000007NwGvAAK\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Fibra 700 Mega\"," &
+"\n          \"CYCLE_FEE_AMT\":7172," &
+"\n          \"CYCLE_START_T\":\"0\"," &
+"\n          \"AC_FLD_COD_ANATEL\":\"SCM004\"," &
+"\n          \"AC_FLD_ID_OFERTA\":\"BL_700_OFFER\"," &
+"\n          \"AC_FLD_FLAG_VISIBILITY\":1," &
+"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"BL_700MB\"," &
+"\n          \"AC_FLD_VELOCITY\":\"700\"" &
+"\n       }," &
+"\n       {" &
+"\n          \"PIN_FLD_PRODUCT_OBJ\":\"SVA\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"802HZ000004apoJYAQ\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Nio Áudio Livros\"," &
+"\n          \"CYCLE_FEE_AMT\":600," &
+"\n          \"AC_FLD_COD_ANATEL\":\"Anatel_SVA\"," &
+"\n          \"AC_FLD_ID_OFERTA\":\"Fibra_SVA\"," &
+"\n          \"AC_ID_OFERTA\":\"1\"," &
+"\n          \"AC_FLD_FLAG_VISIBILITY\":1," &
+"\n          \"AC_FLD_FLAG_EMBARCADO\":\"Embarcado\"," &
+"\n          \"AC_FLD_INCIDENCIA\":\"Banda Larga\"," &
+"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"OI_AUD_LVR\"" &
+"\n       }," &
+"\n       {" &
+"\n          \"PIN_FLD_PRODUCT_OBJ\":\"SVA\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"802HZ000006Jh6HYAS\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Nio Livros\"," &
+"\n          \"CYCLE_FEE_AMT\":2060," &
+"\n          \"AC_FLD_COD_ANATEL\":\"Anatel_SVA\"," &
+"\n          \"AC_FLD_ID_OFERTA\":\"Fibra_SVA\"," &
+"\n          \"AC_ID_OFERTA\":\"1\"," &
+"\n          \"AC_FLD_FLAG_VISIBILITY\":1," &
+"\n          \"AC_FLD_FLAG_EMBARCADO\":\"Embarcado\"," &
+"\n          \"AC_FLD_INCIDENCIA\":\"Banda Larga\"," &
+"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"OI_LVR\"" &
+"\n       }," &
+"\n       {" &
+"\n          \"PIN_FLD_PRODUCT_OBJ\":\"SVA\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"8023h000004Te39AAC\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Nio Expert Presencial\"," &
+"\n          \"CYCLE_FEE_AMT\":1490," &
+"\n          \"AC_FLD_COD_ANATEL\":\"Anatel_SVA\"," &
+"\n          \"AC_FLD_ID_OFERTA\":\"Fibra_SVA\"," &
+"\n          \"AC_ID_OFERTA\":\"1\"," &
+"\n          \"AC_FLD_FLAG_VISIBILITY\":1," &
+"\n          \"AC_FLD_FLAG_EMBARCADO\":\"Embarcado\"," &
+"\n          \"AC_FLD_INCIDENCIA\":\"Banda Larga\"," &
+"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"EXP_CSA\"" &
+"\n       }," &
+"\n       {" &
+"\n          \"PIN_FLD_PRODUCT_OBJ\":\"SVA\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"8023h000007NgtrAAC\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Nio News Estadão\"," &
+"\n          \"CYCLE_FEE_AMT\":399," &
+"\n          \"AC_FLD_COD_ANATEL\":\"Anatel_SVA\"," &
+"\n          \"AC_FLD_ID_OFERTA\":\"Fibra_SVA\"," &
+"\n          \"AC_ID_OFERTA\":\"1\"," &
+"\n          \"AC_FLD_FLAG_VISIBILITY\":1," &
+"\n          \"AC_FLD_FLAG_EMBARCADO\":\"Embarcado\"," &
+"\n          \"AC_FLD_INCIDENCIA\":\"Banda Larga\"," &
+"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"SVA_NEWS_ESTD\"" &
+"\n       }," &
+"\n       {" &
+"\n          \"PIN_FLD_PRODUCT_OBJ\":\"SVA\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"8023h000007InNPAA0\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Nio News Isto É\"," &
+"\n          \"CYCLE_FEE_AMT\":1070," &
+"\n          \"AC_FLD_COD_ANATEL\":\"Anatel_SVA\"," &
+"\n          \"AC_FLD_ID_OFERTA\":\"Fibra_SVA\"," &
+"\n          \"AC_ID_OFERTA\":\"1\"," &
+"\n          \"AC_FLD_FLAG_VISIBILITY\":1," &
+"\n          \"AC_FLD_FLAG_EMBARCADO\":\"Embarcado\"," &
+"\n          \"AC_FLD_INCIDENCIA\":\"Banda Larga\"," &
+"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"SVA_NEWS_IE\"" &
+"\n       }," &
+"\n       {" &
+"\n          \"PIN_FLD_PRODUCT_OBJ\":\"SVA\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"8023h000007IdJIAA0\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Nio News O Dia\"," &
+"\n          \"CYCLE_FEE_AMT\":199," &
+"\n          \"AC_FLD_COD_ANATEL\":\"Anatel_SVA\"," &
+"\n          \"AC_FLD_ID_OFERTA\":\"Fibra_SVA\"," &
+"\n          \"AC_ID_OFERTA\":\"1\"," &
+"\n          \"AC_FLD_FLAG_VISIBILITY\":1," &
+"\n          \"AC_FLD_FLAG_EMBARCADO\":\"Embarcado\"," &
+"\n          \"AC_FLD_INCIDENCIA\":\"Banda Larga\"," &
+"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"SVA_NEWS_ODIA\"" &
+"\n       }," &
+"\n       {" &
+"\n          \"PIN_FLD_PRODUCT_OBJ\":\"SVA\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"8023h000005Kk1CAAS\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Nio Notícias\"," &
+"\n          \"CYCLE_FEE_AMT\":560," &
+"\n          \"AC_FLD_COD_ANATEL\":\"Anatel_SVA\"," &
+"\n          \"AC_FLD_ID_OFERTA\":\"Fibra_SVA\"," &
+"\n          \"AC_ID_OFERTA\":\"1\"," &
+"\n          \"AC_FLD_FLAG_VISIBILITY\":1," &
+"\n          \"AC_FLD_FLAG_EMBARCADO\":\"Embarcado\"," &
+"\n          \"AC_FLD_INCIDENCIA\":\"Banda Larga\"," &
+"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"\"" &
+"\n       }," &
+"\n       {" &
+"\n          \"PIN_FLD_PRODUCT_OBJ\":\"SVA\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"8023h000007B810AAC\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Nio Play Básico\"," &
+"\n          \"CYCLE_FEE_AMT\":0," &
+"\n          \"AC_FLD_COD_ANATEL\":\"Anatel_SVA\"," &
+"\n          \"AC_FLD_ID_OFERTA\":\"Fibra_SVA\"," &
+"\n          \"AC_ID_OFERTA\":\"1\"," &
+"\n          \"AC_FLD_FLAG_VISIBILITY\":1," &
+"\n          \"AC_FLD_FLAG_EMBARCADO\":\"Embarcado\"," &
+"\n          \"AC_FLD_INCIDENCIA\":\"Banda Larga\"," &
+"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"OI_PLY_BSC\"" &
+"\n       }" &
+"\n    ]" &
+"\n }")
+
+    Private Shared ReadOnly _dacTemplate As JObject = JObject.Parse(
+"{" &
+"\n   \"PIN_FLD_POID\":\"0.0.0.1 /account 540926405 0\"," &
+"\n   \"PIN_FLD_BILLINFO_OBJ\":\"0.0.0.1 /billinfo -1 0\"," &
+"\n   \"PIN_FLD_PAY_TYPE\": 3," &
+"\n    \"AC_FLD_PROTOCOL_ID\": \"ORACLE_SAP_006\"," &
+"\n   \"AC_FLD_NSU_CIELO\":\"123\"," &
+"\n   \"AC_FLD_REASON_CODE\":\"1\"," &
+"\n   \"AC_FLD_PURCHASE_SOURCE\" : \"Testes Oracle SAP\"," &
+"\n   \"AC_FLD_TRANSACTION_ID\":\"618648749606489351\"," &
+"\n   \"AC_FLD_AUTHORIZATION_NO\":\"12345\"," &
+"\n   \"AC_FLD_PARCELA\":1," &
+"\n    \"AC_FLD_CONTRACT_ID\": \"TP_ORACLE_SAP_006\"," &
+"\n   \"AC_FLD_REUSO_FLAG\":0," &
+"\n    \"AC_FLD_STR_COD_TERMINAL\": \"\"," &
+"\n   \"PIN_FLD_PAYINFO\":[" &
+"\n   {" &
+"\n       \"PIN_FLD_POID\": \"0.0.0.1 /payinfo -1 0\"," &
+"\n       \"AC_FLD_DACC_INFO\": " &
+"\n       {" &
+"\n           \"AC_FLD_BANK_NO\": \"341\"," &
+"\n           \"AC_FLD_AGENCIA_DACC\": \"7077\"," &
+"\n           \"PIN_FLD_CONTA_DEBITO\": \"067869-9\"" &
+"\n        }" &
+"\n    }   ]," &
+"\n    \"PIN_FLD_PRODUCTS\":[" &
+"\n       {" &
+"\n          \"PIN_FLD_PRODUCT_OBJ\":\"Banda Larga\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"80288000003iJWiAAM\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Fibra 1 Giga\"," &
+"\n          \"CYCLE_FEE_AMT\":45520," &
+"\n          \"CYCLE_START_T\":\"0\"," &
+"\n          \"AC_FLD_COD_ANATEL\":\"SCM004\"," &
+"\n          \"AC_FLD_ID_OFERTA\":\"BL_1000_OFFER\"," &
+"\n          \"AC_FLD_FLAG_VISIBILITY\":1," &
+"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"BL_1000MB\"," &
+"\n          \"AC_FLD_VELOCITY\":\"1000\"," &
+"\n          \"AC_FLD_FIDELIZACAO\" : \"Fidelização Anual\"" &
+"\n       }," &
+"\n       {" &
+"\n          \"PIN_FLD_PRODUCT_OBJ\":\"SVA\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"8023h000004Te39AAC\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Nio Expert Presencial\"," &
+"\n          \"CYCLE_FEE_AMT\":1490," &
+"\n          \"AC_FLD_COD_ANATEL\":\"Anatel_SVA\"," &
+"\n          \"AC_FLD_ID_OFERTA\":\"Fibra_SVA\"," &
+"\n          \"AC_ID_OFERTA\":\"1\"," &
+"\n          \"AC_FLD_FLAG_VISIBILITY\" : \"1\"," &
+"\n          \"AC_FLD_FLAG_EMBARCADO\":\"Embarcado\"," &
+"\n          \"AC_FLD_INCIDENCIA\":\"Banda Larga\"," &
+"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"EXP_CSA\"" &
+"\n       }," &
+"\n       {" &
+"\n          \"PIN_FLD_PRODUCT_OBJ\":\"SVA\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"8023h000007NgtrAAC\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Nio News Estadão\"," &
+"\n          \"CYCLE_FEE_AMT\":399," &
+"\n          \"AC_FLD_COD_ANATEL\":\"Anatel_SVA\"," &
+"\n          \"AC_FLD_ID_OFERTA\":\"Fibra_SVA\"," &
+"\n          \"AC_ID_OFERTA\":\"1\"," &
+"\n          \"AC_FLD_FLAG_VISIBILITY\" : \"1\"," &
+"\n          \"AC_FLD_FLAG_EMBARCADO\":\"Embarcado\"," &
+"\n          \"AC_FLD_INCIDENCIA\":\"Banda Larga\"," &
+"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"SVA_NEWS_ESTD\"" &
+"\n       }," &
+"\n       {" &
+"\n          \"PIN_FLD_PRODUCT_OBJ\":\"SVA\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"8023h000007InNPAA0\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Nio News Isto É\"," &
+"\n          \"CYCLE_FEE_AMT\":1070," &
+"\n          \"AC_FLD_COD_ANATEL\":\"Anatel_SVA\"," &
+"\n          \"AC_FLD_ID_OFERTA\":\"Fibra_SVA\"," &
+"\n          \"AC_ID_OFERTA\":\"1\"," &
+"\n          \"AC_FLD_FLAG_VISIBILITY\" : \"1\"," &
+"\n          \"AC_FLD_FLAG_EMBARCADO\":\"Embarcado\"," &
+"\n          \"AC_FLD_INCIDENCIA\":\"Banda Larga\"," &
+"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"SVA_NEWS_IE\"" &
+"\n       }," &
+"\n       {" &
+"\n          \"PIN_FLD_PRODUCT_OBJ\":\"SVA\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"8023h000007IdJIAA0\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Nio News O Dia\"," &
+"\n          \"CYCLE_FEE_AMT\":199," &
+"\n          \"AC_FLD_COD_ANATEL\":\"Anatel_SVA\"," &
+"\n          \"AC_FLD_ID_OFERTA\":\"Fibra_SVA\"," &
+"\n          \"AC_ID_OFERTA\":\"1\"," &
+"\n          \"AC_FLD_FLAG_VISIBILITY\" : \"1\"," &
+"\n          \"AC_FLD_FLAG_EMBARCADO\":\"Embarcado\"," &
+"\n          \"AC_FLD_INCIDENCIA\":\"Banda Larga\"," &
+"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"SVA_NEWS_ODIA\"" &
+"\n       }," &
+"\n       {" &
+"\n          \"PIN_FLD_PRODUCT_OBJ\":\"SVA\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"8023h000005Kk1CAAS\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Nio Notícias\"," &
+"\n          \"CYCLE_FEE_AMT\":560," &
+"\n          \"AC_FLD_COD_ANATEL\":\"Anatel_SVA\"," &
+"\n          \"AC_FLD_ID_OFERTA\":\"Fibra_SVA\"," &
+"\n          \"AC_ID_OFERTA\":\"1\"," &
+"\n          \"AC_FLD_FLAG_VISIBILITY\" : \"1\"," &
+"\n          \"AC_FLD_FLAG_EMBARCADO\":\"Embarcado\"," &
+"\n          \"AC_FLD_INCIDENCIA\":\"Banda Larga\"," &
+"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"OI_NTC\"" &
+"\n       }," &
+"\n       {" &
+"\n          \"PIN_FLD_PRODUCT_OBJ\":\"Oi Play\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"8023h000007B810AAC\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Nio Play Básico\"," &
+"\n          \"CYCLE_FEE_AMT\":0," &
+"\n          \"AC_FLD_COD_ANATEL\":\"Anatel_SVA\"," &
+"\n          \"AC_FLD_ID_OFERTA\":\"Fibra_SVA\"," &
+"\n          \"AC_ID_OFERTA\":\"1\"," &
+"\n          \"AC_FLD_FLAG_VISIBILITY\" : \"1\"," &
+"\n          \"AC_FLD_FLAG_EMBARCADO\":\"Embarcado\"," &
+"\n          \"AC_FLD_INCIDENCIA\":\"Banda Larga\"," &
+"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"OI_PLY_BSC\"" &
+"\n       }," &
+"\n       {" &
+"\n          \"PIN_FLD_PRODUCT_OBJ\":\"SVA\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"802U6000000YuhbIAC\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"1 Ponto Extra Wi-Fi 6 FTTR\"," &
+"\n          \"CYCLE_FEE_AMT\":2500," &
+"\n          \"AC_FLD_COD_ANATEL\" : \"\"," &
+"\n          \"AC_FLD_FLAG_VISIBILITY\" : \"1\"," &
+"\n          \"AC_FLD_FLAG_EMBARCADO\":\"Embarcado\"," &
+"\n          \"AC_FLD_INCIDENCIA\":\"Banda Larga\"," &
+"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"FIBRAX_FTTR_1AP\"" &
+"\n       }," &
+"\n       {" &
+"\n          \"PIN_FLD_PRODUCT_OBJ\":\"SVOD\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"802U6000008PsYPIA0\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Max\"," &
+"\n          \"CYCLE_FEE_AMT\":0," &
+"\n          \"AC_FLD_COD_ANATEL\":\"\"," &
+"\n          \"AC_FLD_ID_OFERTA\":\"BL_1000_OFFER\"," &
+"\n          \"AC_ID_OFERTA\":\"1\"," &
+"\n          \"AC_FLD_FLAG_VISIBILITY\" : \"1\"," &
+"\n          \"AC_FLD_FLAG_EMBARCADO\":\"\"," &
+"\n          \"AC_FLD_INCIDENCIA\":\"Banda Larga\"," &
+"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"HBO_MAX\"" &
+"\n       }," &
+"\n   {" &
+"\n          \"PIN_FLD_PRODUCT_OBJ\" : \"VoIP\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_ID\" : \"80288000006BmXOAA0\"," &
+"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Nio Fixo Fibra\"," &
+"\n          \"CYCLE_FEE_AMT\":2990," &
+"\n          \"AC_FLD_COD_ANATEL\" : \"STFC001_002_003\"," &
+"\n          \"AC_FLD_FLAG_VISIBILITY\" : \"1\"," &
+"\n          \"AC_FLD_FLAG_EMBARCADO\" : \"Avulso\"," &
+"\n          \"AC_FLD_CAT_PRODUCT_ID\" : \"VOIP_FIXOILIMITADO\"," &
+"\n          \"AC_FLD_STR_COD_TERMINAL\" : \"3164611919\"" &
+"\n       }" &
+"\n    ]" &
+"\n }")
+
+    Private Shared Function GetTemplate(tipo As PayType) As JObject
+        Select Case tipo
+            Case PayType.CreditCard
+                Return _creditCardTemplate
+            Case PayType.Boleto
+                Return _boletoTemplate
+            Case PayType.DAC
+                Return _dacTemplate
+            Case Else
+                Return _creditCardTemplate
+        End Select
+    End Function
 
     ' ===== Telemetría/OUT =====
     Public Property LastRequestJson As String
@@ -109,7 +576,7 @@ Public Class CompraProductos
     End Property
 
     Public Async Function ComprarAsync(accountPoid As String,
-                                       tipo As PayType,
+                                       tipo As PayType?,
                                        Optional persist As Boolean = True,
                                        Optional payTypeOverride As Integer? = Nothing) As Task(Of CompraProductosResult)
 
@@ -131,11 +598,20 @@ Public Class CompraProductos
             Dim terminal As String = GenerarTerminalUnico()
 
             ' 2) Pay type
+            Dim selectedPayType As PayType
+            Dim randomPayType As Boolean = False
+            If tipo.HasValue AndAlso [Enum].IsDefined(GetType(PayType), tipo.Value) Then
+                selectedPayType = tipo.Value
+            Else
+                selectedPayType = GetRandomPayType()
+                randomPayType = True
+            End If
+
             Dim pinPayType As Integer = If(payTypeOverride.HasValue, payTypeOverride.Value,
-                                           If(tipo = PayType.CreditCard, -1, If(tipo = PayType.Boleto, -2, -3)))
+                                           CInt(selectedPayType))
 
             ' 3) JSON exacto
-            Dim payload As JObject = BuildPurchasePayload(poid, protocol, contractId, terminal, pinPayType)
+            Dim payload As JObject = BuildPurchasePayload(poid, protocol, contractId, terminal, pinPayType, selectedPayType)
             Dim json As String = payload.ToString(Formatting.None)
 
             LastRequestJson = json
@@ -147,7 +623,10 @@ Public Class CompraProductos
             OUT(protocolLine)
             LogInfoToLogger("PURCHASE", protocolLine)
 
-            Dim payTypeLine As String = "[PURCHASE] PayTypePin=" & pinPayType.ToString()
+            Dim payTypeLine As String = String.Format("[PURCHASE] PayType={0} (PIN={1}){2}",
+                                                      selectedPayType.ToString(),
+                                                      pinPayType,
+                                                      If(randomPayType, " [ALEATORIO]", String.Empty))
             OUT(payTypeLine)
             LogInfoToLogger("PURCHASE", payTypeLine)
 
@@ -185,14 +664,54 @@ Public Class CompraProductos
                     LogBlock("=== PURCHASE RESPONSE (ver Log_Debug) ===", body, "PURCHASE_RESPONSE")
 
                     ' 5) Validaciones posteriores a la compra
-                    Dim okProtocolo As Boolean = ValidarCompraEnBdPorProtocolo(protocol)
-                    Dim validationLine As String = "[PURCHASE][VALIDATION][PROTOCOLO] Resultado=" & If(okProtocolo, "OK", "SIN REGISTRO")
-                    OUT(validationLine)
-                    LogInfoToLogger("PURCHASE_VALIDATION", validationLine)
-                    Dim okProductos As Boolean = ValidarProductosActivosPorAccount(poid)
-                    Dim validationProductsLine As String = "[PURCHASE][VALIDATION][PRODUCTOS] Resultado=" & If(okProductos, "OK", "SIN PRODUCTOS ACTIVOS")
-                    OUT(validationProductsLine)
-                    LogInfoToLogger("PURCHASE_VALIDATION", validationProductsLine)
+                    Dim okProtocolo As Boolean = False
+                    For attempt As Integer = 1 To VALIDATION_MAX_ATTEMPTS
+                        okProtocolo = ExisteCompraEnBdPorProtocolo(protocol)
+                        Dim baseLine As String = String.Format("[PURCHASE][VALIDATION][PROTOCOLO] intento {0}: {1}",
+                                                                 attempt,
+                                                                 If(okProtocolo, "OK", "SIN REGISTRO"))
+                        If okProtocolo OrElse attempt = VALIDATION_MAX_ATTEMPTS Then
+                            OUT(baseLine)
+                            LogInfoToLogger("PURCHASE_VALIDATION", baseLine)
+                        Else
+                            Dim retryLine As String = baseLine & ". Reintentando en 2s..."
+                            OUT(retryLine)
+                            LogInfoToLogger("PURCHASE_VALIDATION", retryLine)
+                            Await Task.Delay(VALIDATION_DELAY).ConfigureAwait(False)
+                        End If
+
+                        If okProtocolo Then Exit For
+                    Next
+
+                    Dim okProductos As Boolean = False
+                    For attempt As Integer = 1 To VALIDATION_MAX_ATTEMPTS
+                        Dim consulta = ConsultarProductosActivosPorAccount(poid)
+                        Dim headerProductos As String = String.Format("=== PURCHASE PRODUCTS (query) intento {0} ===", attempt)
+                        LogBlock(headerProductos, consulta.Tabla, "PURCHASE_PRODUCTS", isJson:=False)
+
+                        Dim baseProductos As String = String.Format("[PURCHASE][VALIDATION][PRODUCTOS] intento {0}: {1}",
+                                                                    attempt,
+                                                                    If(consulta.TieneProductoActivo, "OK", "SIN PRODUCTOS ACTIVOS"))
+
+                        If consulta.TieneProductoActivo OrElse consulta.HuboError OrElse attempt = VALIDATION_MAX_ATTEMPTS Then
+                            OUT(baseProductos)
+                            LogInfoToLogger("PURCHASE_VALIDATION", baseProductos)
+                        Else
+                            Dim retryProductos As String = baseProductos & ". Reintentando en 2s..."
+                            OUT(retryProductos)
+                            LogInfoToLogger("PURCHASE_VALIDATION", retryProductos)
+                            Await Task.Delay(VALIDATION_DELAY).ConfigureAwait(False)
+                        End If
+
+                        If consulta.HuboError Then
+                            Exit For
+                        End If
+
+                        If consulta.TieneProductoActivo Then
+                            okProductos = True
+                            Exit For
+                        End If
+                    Next
 
                     r.Success = okProtocolo AndAlso okProductos
 
@@ -235,19 +754,19 @@ Public Class CompraProductos
                                           protocolId As String,
                                           contractId As String,
                                           terminal As String,
-                                          pinPayType As Integer) As JObject
-        Dim o As New JObject()
-        o("PIN_FLD_POID") = accountPoid
-        o("AC_FLD_PROTOCOL_ID") = protocolId
-        o("AC_FLD_CONTRACT_ID") = contractId
-        o("AC_FLD_STR_COD_TERMINAL") = terminal
-        o("PIN_FLD_PAY_TYPE") = pinPayType
-        ' TODO: agrega campos fijos restantes si tu API lo pide
-        Return o
+                                          pinPayType As Integer,
+                                          tipo As PayType) As JObject
+        Dim template As JObject = CType(GetTemplate(tipo).DeepClone(), JObject)
+        template("PIN_FLD_POID") = accountPoid
+        template("AC_FLD_PROTOCOL_ID") = protocolId
+        template("AC_FLD_CONTRACT_ID") = contractId
+        template("AC_FLD_STR_COD_TERMINAL") = terminal
+        template("PIN_FLD_PAY_TYPE") = pinPayType
+        Return template
     End Function
 
     ' ====== Validación mínima ======
-    Private Function ValidarCompraEnBdPorProtocolo(protocolId As String) As Boolean
+    Private Function ExisteCompraEnBdPorProtocolo(protocolId As String) As Boolean
         Try
             Dim sql As String =
 "SELECT CASE WHEN EXISTS (
@@ -325,6 +844,12 @@ Public Class CompraProductos
 
     Private Shared ReadOnly _rnd As New Random()
 
+    Private Shared Function GetRandomPayType() As PayType
+        Dim values As Array = [Enum].GetValues(GetType(PayType))
+        Dim index As Integer = _rnd.Next(values.Length)
+        Return CType(values.GetValue(index), PayType)
+    End Function
+
     Private Function GenerarTerminalUnico() As String
         Dim tries As Integer = 0
         While tries < 200
@@ -365,8 +890,8 @@ Public Class CompraProductos
         Return s
     End Function
 
-
-    Private Function ValidarProductosActivosPorAccount(accountPoid As String) As Boolean
+    Private Function ConsultarProductosActivosPorAccount(accountPoid As String) As ConsultaProductosResult
+        Dim result As New ConsultaProductosResult() With {.Tabla = "(sin registros)"}
         Dim accountObjId As Long?
         Try
             accountObjId = ExtraerAccountObjId(accountPoid)
@@ -374,14 +899,15 @@ Public Class CompraProductos
             Dim parseErr As String = "[PURCHASE][VALIDATION][PRODUCTOS] Error al interpretar AccountPoid: " & ex.Message
             OUT(parseErr)
             LogInfoToLogger("PURCHASE_VALIDATION", parseErr)
-            Return False
+            result.HuboError = True
+            Return result
         End Try
 
         If Not accountObjId.HasValue Then
             Dim msg As String = "[PURCHASE][VALIDATION][PRODUCTOS] AccountObjId no disponible para validar."
             OUT(msg)
             LogInfoToLogger("PURCHASE_VALIDATION", msg)
-            Return False
+            Return result
         End If
 
         Try
@@ -411,26 +937,26 @@ Public Class CompraProductos
             Dim dt As DataTable = _db.ExecuteDataTable(sql,
                 New Dictionary(Of String, Object) From {{":acctId", accountObjId.Value}}, 40)
 
-            Dim tableText As String = FormatearTabla(dt)
-            LogBlock("=== PURCHASE PRODUCTS (query) ===", tableText, "PURCHASE_PRODUCTS", isJson:=False)
+            result.Tabla = FormatearTabla(dt)
 
-            If dt Is Nothing OrElse dt.Rows.Count = 0 Then Return False
+            If dt Is Nothing OrElse dt.Rows.Count = 0 Then Return result
 
             For Each row As DataRow In dt.Rows
                 Dim statusServicio As String = Convert.ToString(row("STATUS")).Trim()
                 Dim productoActivo As Boolean = EvaluarStatusProducto(row)
                 If String.Equals(statusServicio, "ATIVO", StringComparison.OrdinalIgnoreCase) AndAlso productoActivo Then
-                    Return True
+                    result.TieneProductoActivo = True
+                    Exit For
                 End If
             Next
-
-            Return False
         Catch ex As Exception
             Dim err As String = "[PURCHASE][VALIDATION][PRODUCTOS] " & ex.Message
             OUT(err)
             LogInfoToLogger("PURCHASE_VALIDATION", err)
-            Return False
+            result.HuboError = True
         End Try
+
+        Return result
     End Function
 
     Private Shared Function EvaluarStatusProducto(row As DataRow) As Boolean
@@ -518,6 +1044,13 @@ Public Class CompraProductos
 
         Return Nothing
     End Function
+
+
+    Private Class ConsultaProductosResult
+        Public Property TieneProductoActivo As Boolean
+        Public Property Tabla As String
+        Public Property HuboError As Boolean
+    End Class
 
 
 End Class
