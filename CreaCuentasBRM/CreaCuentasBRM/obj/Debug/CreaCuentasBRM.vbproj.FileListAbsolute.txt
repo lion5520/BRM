@@ -1,9 +1,6 @@
 C:\Users\Lion\AppData\Local\Temporary Projects\CreaCuentasBRM\bin\Debug\CreaCuentasBRM.exe.config
+C:\Users\Lion\Desktop\BRM_CREATE_ACCOUNTS\CreaCuentasBRM\CreaCuentasBRM\bin\Debug\seeds_clientes_br.csv
 C:\Users\Lion\Desktop\BRM_CREATE_ACCOUNTS\CreaCuentasBRM\CreaCuentasBRM\bin\Debug\CreaCuentasBRM.exe.config
-C:\Users\Lion\Desktop\BRM_CREATE_ACCOUNTS\CreaCuentasBRM\CreaCuentasBRM\obj\Debug\CreaCuentasBRM.vbprojResolveAssemblyReference.cache
-C:\Users\Lion\Desktop\BRM_CREATE_ACCOUNTS\CreaCuentasBRM\CreaCuentasBRM\obj\Debug\CreaCuentasBRM.Resources.resources
-C:\Users\Lion\Desktop\BRM_CREATE_ACCOUNTS\CreaCuentasBRM\CreaCuentasBRM\obj\Debug\CreaCuentasBRM.vbproj.GenerateResource.Cache
-C:\Users\Lion\Desktop\BRM_CREATE_ACCOUNTS\CreaCuentasBRM\CreaCuentasBRM\obj\Debug\CreaCuentasBRM.xml
 C:\Users\Lion\Desktop\BRM_CREATE_ACCOUNTS\CreaCuentasBRM\CreaCuentasBRM\bin\Debug\CreaCuentasBRM.exe
 C:\Users\Lion\Desktop\BRM_CREATE_ACCOUNTS\CreaCuentasBRM\CreaCuentasBRM\bin\Debug\CreaCuentasBRM.pdb
 C:\Users\Lion\Desktop\BRM_CREATE_ACCOUNTS\CreaCuentasBRM\CreaCuentasBRM\bin\Debug\CreaCuentasBRM.xml
@@ -32,7 +29,9 @@ C:\Users\Lion\Desktop\BRM_CREATE_ACCOUNTS\CreaCuentasBRM\CreaCuentasBRM\bin\Debu
 C:\Users\Lion\Desktop\BRM_CREATE_ACCOUNTS\CreaCuentasBRM\CreaCuentasBRM\bin\Debug\System.Text.Json.xml
 C:\Users\Lion\Desktop\BRM_CREATE_ACCOUNTS\CreaCuentasBRM\CreaCuentasBRM\bin\Debug\System.Threading.Tasks.Extensions.xml
 C:\Users\Lion\Desktop\BRM_CREATE_ACCOUNTS\CreaCuentasBRM\CreaCuentasBRM\bin\Debug\System.ValueTuple.xml
-C:\Users\Lion\Desktop\BRM_CREATE_ACCOUNTS\CreaCuentasBRM\CreaCuentasBRM\obj\Debug\CreaCuentasBRM.exe
-C:\Users\Lion\Desktop\BRM_CREATE_ACCOUNTS\CreaCuentasBRM\CreaCuentasBRM\obj\Debug\CreaCuentasBRM.pdb
 C:\Users\Lion\Desktop\BRM_CREATE_ACCOUNTS\CreaCuentasBRM\CreaCuentasBRM\obj\Debug\CreaCuentasBRM.FormMain.resources
-C:\Users\Lion\Desktop\BRM_CREATE_ACCOUNTS\CreaCuentasBRM\CreaCuentasBRM\bin\Debug\seeds_clientes_br.csv
+C:\Users\Lion\Desktop\BRM_CREATE_ACCOUNTS\CreaCuentasBRM\CreaCuentasBRM\obj\Debug\CreaCuentasBRM.Resources.resources
+C:\Users\Lion\Desktop\BRM_CREATE_ACCOUNTS\CreaCuentasBRM\CreaCuentasBRM\obj\Debug\CreaCuentasBRM.vbproj.GenerateResource.Cache
+C:\Users\Lion\Desktop\BRM_CREATE_ACCOUNTS\CreaCuentasBRM\CreaCuentasBRM\obj\Debug\CreaCuentasBRM.exe
+C:\Users\Lion\Desktop\BRM_CREATE_ACCOUNTS\CreaCuentasBRM\CreaCuentasBRM\obj\Debug\CreaCuentasBRM.xml
+C:\Users\Lion\Desktop\BRM_CREATE_ACCOUNTS\CreaCuentasBRM\CreaCuentasBRM\obj\Debug\CreaCuentasBRM.pdb
