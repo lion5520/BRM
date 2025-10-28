@@ -117,17 +117,17 @@ Public Class FormMain
                     ProgressBar_general.Refresh()
                 End If
 
-                Dim tipoCliente As CreaCliente.TipoCliente = CreaCliente.TipoCliente.PF
+                Dim tipoCliente As CreaCliente.TipoCliente = CreaCliente.TipoCliente.CPF
                 If ComboBox_ClienteTPO IsNot Nothing AndAlso ComboBox_ClienteTPO.SelectedItem IsNot Nothing Then
                     Dim s As String = ComboBox_ClienteTPO.SelectedItem.ToString().Trim().ToUpperInvariant()
-                    If s = "PJ" Then tipoCliente = CreaCliente.TipoCliente.PJ
+                    If s = "CPF" Then tipoCliente = CreaCliente.TipoCliente.CPF
                 End If
 
                 Dim uF_Seleccionada As String
                 If ComboBox_UF IsNot Nothing AndAlso ComboBox_UF.SelectedItem IsNot Nothing Then
                     uF_Seleccionada = ComboBox_UF.SelectedItem.ToString().Trim().ToUpperInvariant()
                 Else
-                    uF_Seleccionada = "RJ"
+                    uF_Seleccionada = "CNPJ"
                 End If
 
                 AppendDebug("[DATA] [FLOW] Tipo Cliente: " & tipoCliente.ToString())

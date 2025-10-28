@@ -62,7 +62,7 @@ Public Class FrmWizardCliente
     Private ReadOnly rnd As New Random()
 
     Public Sub New()
-        Me.Text = "BRM – Crear Clientes (PF/PJ) por Semillas"
+        Me.Text = "BRM – Crear Clientes (CPF/CNPJ) por Semillas"
         Me.Width = 980
         Me.Height = 720
         Me.StartPosition = FormStartPosition.CenterScreen

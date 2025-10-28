@@ -15,8 +15,8 @@ Imports System.Linq
 Public Class CreaCliente
 
     Public Enum TipoCliente
-        PF = 1
-        PJ = 2
+        CPF = 1
+        CNPJ = 2
     End Enum
 
     ' ===== Config =====
@@ -65,7 +65,7 @@ Public Class CreaCliente
             Dim resolvedTipo As TipoCliente = tipo
             If Not [Enum].IsDefined(GetType(TipoCliente), resolvedTipo) Then
                 OUT("[CREATE][WARN] TipoCliente no reconocido (" & CInt(tipo).ToString() & "), usando PF por defecto.")
-                resolvedTipo = TipoCliente.PF
+                resolvedTipo = TipoCliente.CPF
             End If
 
             OUT("[CREATE][FLOW] TipoCliente recibido: " & resolvedTipo.ToString())
@@ -207,7 +207,7 @@ Public Class CreaCliente
         Dim complement As String = If(String.IsNullOrWhiteSpace(seed.AddressComplement), String.Empty, seed.AddressComplement.ToUpperInvariant())
 
         Dim protocol As String = GenerateUniqueProtocolId(PROTOCOL_PREFIX)
-        Dim isPF As Boolean = (tipo = TipoCliente.PF)
+        Dim isPF As Boolean = (tipo = TipoCliente.CPF)
         Dim doc As String = If(isPF, GenerarCPFValidoDemo(), GenerarCNPJValidoDemo())
 
         OUT("[CREATE][BUILD] TipoCliente=" & If(isPF, "PF", "PJ") & " Documento=" & doc)
