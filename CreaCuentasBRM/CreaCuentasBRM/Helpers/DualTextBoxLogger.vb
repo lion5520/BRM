@@ -95,7 +95,7 @@ Namespace Helpers
             Dim pretty As String = FormatJson(json)
             Dim tag As String = "<JSON"
             If Not String.IsNullOrWhiteSpace(label) Then
-                tag &= " label=\"" & label & "\""
+                tag &= " label=\" & label & " \ "
             End If
             tag &= ">"
             Dim footer As String = "</JSON>"
