@@ -15,6 +15,8 @@ Public Class BolecodeResponse
     Private Const PATH As String = "/BRMCustCustomServices/resources/BRMPaymentCustomServicesREST/bolecodeResponse"
     Private Const TOKEN_PREFIX As String = "03395942"
     Private Const TOKEN_SEED As String = "03395942700000000109019716900000001038855000"
+    Private Const PAYTYPE_BOLETO As Integer = 2
+    Private Const PAYTYPE_DAC As Integer = 3
 
     ' ===== Dependencias =====
     Private Shared ReadOnly _http As HttpClient = New HttpClient() With {.Timeout = TimeSpan.FromSeconds(30)}
@@ -74,26 +76,42 @@ Public Class BolecodeResponse
                 Return r
             End If
 
-            Dim boletoToken As String = ObtenerSiguienteToken("PIN.AC_PAR_REMESSA_BOLETO_T", "TOKEN_BOLETO", TOKEN_PREFIX, TOKEN_SEED)
-            Dim pixToken As String = ObtenerSiguienteToken("PIN.AC_PAR_REMESSA_PIX_T", "PIX_TOKEN", TOKEN_PREFIX, TOKEN_SEED)
+            Dim payType As Integer? = ObtenerPayTypePorPar(parId)
+            Dim requiereActualizacion As Boolean = Not payType.HasValue OrElse payType.Value = PAYTYPE_BOLETO OrElse payType.Value = PAYTYPE_DAC
+            OUT("[BOLECODE][DB] PAR_ID=" & parId & " PAY_TYPE=" & If(payType.HasValue, payType.Value.ToString(), "NULL") & " RequiresUpdates=" & requiereActualizacion.ToString())
 
-            OUT("[BOLECODE][DB] PAR_ID=" & parId & " TOKEN_BOLETO=" & boletoToken & " PIX_TOKEN=" & pixToken)
+            Dim boletoToken As String
+            Dim pixToken As String
 
-            If persist Then
-                ActualizarToken("PIN.AC_PAR_REMESSA_BOLETO_T", "TOKEN_BOLETO", parId, boletoToken)
-                ActualizarToken("PIN.AC_PAR_REMESSA_PIX_T", "PIX_TOKEN", parId, pixToken)
-                ActualizarStatusPar(parId, 2)
+            If requiereActualizacion Then
+                boletoToken = ObtenerSiguienteToken("PIN.AC_PAR_REMESSA_BOLETO_T", "TOKEN_BOLETO", TOKEN_PREFIX, TOKEN_SEED)
+                pixToken = ObtenerSiguienteToken("PIN.AC_PAR_REMESSA_PIX_T", "PIX_TOKEN", TOKEN_PREFIX, TOKEN_SEED)
+
+                OUT("[BOLECODE][DB] Nuevos tokens generados TOKEN_BOLETO=" & boletoToken & " PIX_TOKEN=" & pixToken)
+
+                If persist Then
+                    ActualizarToken("PIN.AC_PAR_REMESSA_BOLETO_T", "TOKEN_BOLETO", parId, boletoToken)
+                    ActualizarToken("PIN.AC_PAR_REMESSA_PIX_T", "PIX_TOKEN", parId, pixToken)
+                    ActualizarStatusPar(parId, 2)
+                Else
+                    OUT("[BOLECODE][DRY-RUN] persist=False, updates de tokens omitidos.")
+                End If
             Else
-                OUT("[BOLECODE][DRY-RUN] persist=False, updates de tokens omitidos.")
+                boletoToken = ObtenerTokenActual("PIN.AC_PAR_REMESSA_BOLETO_T", "TOKEN_BOLETO", parId)
+                pixToken = ObtenerTokenActual("PIN.AC_PAR_REMESSA_PIX_T", "PIX_TOKEN", parId)
+                OUT("[BOLECODE][DB] Tokens existentes reutilizados TOKEN_BOLETO=" & boletoToken & " PIX_TOKEN=" & pixToken)
             End If
 
+            Dim tokenEfectivo As String = If(String.IsNullOrWhiteSpace(boletoToken), TOKEN_SEED, boletoToken.Trim())
+            Dim parIdEfectivo As String = If(String.IsNullOrWhiteSpace(parId), String.Empty, parId)
+
             Dim payload As New JObject From {
-                {"token", boletoToken},
-                {"id", parId},
+                {"token", tokenEfectivo},
+                {"id", parIdEfectivo},
                 {"origin", "brmnf"},
                 {"status", "valid"},
-                {"bar_code", "03395942700000000109019716900000001038891001"},
-                {"typeable_line", "03399356782060000000201234501011693970000000100"},
+                {"bar_code", tokenEfectivo},
+                {"typeable_line", tokenEfectivo},
                 {"our_number", "0000000042398"},
                 {"gateway_boleto", "santander"},
                 {"qr_code", "0002010102122692..."},
@@ -106,8 +124,8 @@ Public Class BolecodeResponse
 
             If Not persist Then
                 r.Success = True
-                r.Token = boletoToken
-                r.ParId = parId
+                r.Token = tokenEfectivo
+                r.ParId = parIdEfectivo
                 OUT("[BOLECODE][DRY-RUN] persist=False, POST omitido.")
                 LogInfoToLogger("BOLECODE_DRYRUN", "[BOLECODE][DRY-RUN] persist=False, POST omitido.")
                 Return r
@@ -130,8 +148,8 @@ Public Class BolecodeResponse
                     LogJsonToLogger("BOLECODE_RESPONSE", body)
 
                     r.Success = (LastHttpStatus.HasValue AndAlso LastHttpStatus.Value >= 200 AndAlso LastHttpStatus.Value < 300)
-                    r.Token = boletoToken
-                    r.ParId = parId
+                    r.Token = tokenEfectivo
+                    r.ParId = parIdEfectivo
                     r.HttpStatus = LastHttpStatus
                     r.RawBody = LastResponseBody
                 End Using
@@ -191,9 +209,29 @@ Public Class BolecodeResponse
     End Function
 
     Private Shared Function IncrementToken(baseToken As String) As String
-        If String.IsNullOrWhiteSpace(baseToken) Then Return TOKEN_SEED & "1"
+        Dim trimmed As String = If(baseToken, String.Empty).Trim()
+        If trimmed.Length = 0 Then Return TOKEN_SEED
 
-        Dim chars As Char() = baseToken.Trim().ToCharArray()
+        If trimmed.Length >= 4 Then
+            Dim prefixLength As Integer = trimmed.Length - 4
+            Dim prefix As String = trimmed.Substring(0, prefixLength)
+            Dim suffix As String = trimmed.Substring(prefixLength)
+            Dim lastDigits As Integer
+            If Integer.TryParse(suffix, lastDigits) Then
+                lastDigits += 1
+                If lastDigits <= 9999 Then
+                    Return prefix & lastDigits.ToString("D4")
+                End If
+            End If
+        End If
+
+        Return IncrementAllDigits(trimmed)
+    End Function
+
+    Private Shared Function IncrementAllDigits(value As String) As String
+        If String.IsNullOrWhiteSpace(value) Then Return TOKEN_SEED
+
+        Dim chars As Char() = value.Trim().ToCharArray()
         Dim carry As Integer = 1
 
         For i As Integer = chars.Length - 1 To 0 Step -1
@@ -230,6 +268,22 @@ Public Class BolecodeResponse
         }
         _db.ExecuteNonQuery(sql, parameters, 20)
     End Sub
+
+    Private Function ObtenerTokenActual(tableName As String,
+                                         columnName As String,
+                                         parId As String) As String
+        If String.IsNullOrWhiteSpace(parId) Then Return String.Empty
+
+        Try
+            Dim sql As String = String.Format("SELECT {0} FROM {1} WHERE PAR_ID = :par", columnName, tableName)
+            Dim token As String = _db.ExecuteScalar(Of String)(sql,
+                New Dictionary(Of String, Object) From {{":par", parId}}, 15)
+            If String.IsNullOrWhiteSpace(token) Then Return String.Empty
+            Return token.Trim()
+        Catch
+            Return String.Empty
+        End Try
+    End Function
 
     Private Sub ActualizarStatusPar(parId As String, statusId As Integer)
         Dim sql As String = "UPDATE PIN.AC_PAR_T SET STATUS_ID = :status WHERE PAR_ID = :par"
@@ -270,6 +324,31 @@ Public Class BolecodeResponse
             Return "0.0.0.1 /account " & idNum.ToString() & " 0"
         End If
         Return s
+    End Function
+
+    Private Function ObtenerPayTypePorPar(parId As String) As Integer?
+        If String.IsNullOrWhiteSpace(parId) Then Return Nothing
+
+        Dim columnas() As String = {"PAY_TYPE", "PAY_TYPE_ID"}
+
+        For Each columna In columnas
+            Try
+                Dim sql As String = String.Format("SELECT {0} FROM PIN.AC_PAR_T WHERE PAR_ID = :par", columna)
+                Dim payTypeRaw As String = _db.ExecuteScalar(Of String)(sql,
+                    New Dictionary(Of String, Object) From {{":par", parId}}, 15)
+
+                If Not String.IsNullOrWhiteSpace(payTypeRaw) Then
+                    Dim pay As Integer
+                    If Integer.TryParse(payTypeRaw.Trim(), pay) Then
+                        Return pay
+                    End If
+                End If
+            Catch
+                ' Ignorar y probar con el siguiente nombre de columna posible.
+            End Try
+        Next
+
+        Return Nothing
     End Function
 
     Private Sub LogInfoToLogger(scope As String, message As String)
