@@ -3,6 +3,7 @@ Option Explicit On
 
 Imports System
 Imports System.Threading.Tasks
+Imports System.Windows.Forms
 Imports CreaCuentasBRM.Helpers
 
 Public Class FormMain
@@ -11,6 +12,8 @@ Public Class FormMain
     Private ReadOnly _comprador As New CompraProductos()
     Private ReadOnly _bole As New BolecodeResponse()
     Private _appLogger As DualTextBoxLogger
+    Private _totalCreados As Integer
+    Private _totalErrores As Integer
 
     Private Sub FormMain_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         ' Engancha canal OUT
@@ -32,6 +35,9 @@ Public Class FormMain
             ProgressBar_general.Maximum = 100
             ProgressBar_general.Value = 0
         End If
+
+        ResetCounters()
+        ResetLabels()
 
         AppendDebug("[DATA] [INIT] Form listo.")
     End Sub
@@ -83,6 +89,8 @@ Public Class FormMain
                 If Integer.TryParse(cuentasTexto.Trim(), tmp) AndAlso tmp > 0 Then nCuentas = tmp
             End If
 
+            ResetCounters()
+            ResetLabels()
             AppendDebug("[DATA] [FLOW] Inicio. Cuentas=" & nCuentas.ToString() & " Persistencia=" & doPersist.ToString())
 
             Dim totalSteps As Integer = Math.Max(1, nCuentas * 3)
@@ -122,6 +130,7 @@ Public Class FormMain
                     If _appLogger IsNot Nothing Then
                         _appLogger.LogError(detalle, Nothing, New With {.Etapa = "CrearCuenta", .Iteracion = i})
                     End If
+                    IncrementErrores()
                     Exit For
                 End If
                 currentStep += 1
@@ -153,6 +162,7 @@ Public Class FormMain
                     If _appLogger IsNot Nothing Then
                         _appLogger.LogError(detalleCompra, Nothing, New With {.Etapa = "CompraProductos", .Iteracion = i, .Account = rc.AccountPoid})
                     End If
+                    IncrementErrores()
                     Exit For
                 End If
                 currentStep += 1
@@ -171,6 +181,7 @@ Public Class FormMain
                     If _appLogger IsNot Nothing Then
                         _appLogger.LogError(detallePago, Nothing, New With {.Etapa = "ActualizarDatos", .Iteracion = i, .Account = rc.AccountPoid})
                     End If
+                    IncrementErrores()
                     Exit For
                 End If
 
@@ -179,6 +190,7 @@ Public Class FormMain
                     ProgressBar_general.Value = Math.Min(ProgressBar_general.Maximum, currentStep)
                     ProgressBar_general.Refresh()
                 End If
+                IncrementCreados()
                 AppendDebug("[DATA] [FLOW] Iteración #" & i.ToString() & " completada.")
             Next
 
@@ -198,6 +210,7 @@ Public Class FormMain
                     ProgressBar_general.Refresh()
                 End If
             End If
+            UpdateLabels()
         Catch ex As Exception
             AppendDebug("[ERROR] " & ex.Message)
             If _appLogger IsNot Nothing Then
@@ -212,5 +225,70 @@ Public Class FormMain
         End Try
     End Sub
 
+    Private Sub Button_limpiar_Click(sender As Object, e As EventArgs) Handles Button_limpiar.Click
+        ResetInterface()
+    End Sub
+
+    Private Sub ResetInterface()
+        ResetCounters()
+        ResetLabels()
+
+        If _appLogger IsNot Nothing Then
+            _appLogger.Clear()
+        Else
+            tst_log_out?.Clear()
+            tst_log_debug?.Clear()
+        End If
+
+        If ProgressBar_general IsNot Nothing Then
+            ProgressBar_general.Value = 0
+            ProgressBar_general.Refresh()
+        End If
+
+        TextBox_NoCuentas?.Clear()
+        ComboBox_ClienteTPO?.ResetText()
+        ComboBox_ProductoTPO?.ResetText()
+        If ComboBox_ClienteTPO IsNot Nothing Then ComboBox_ClienteTPO.SelectedIndex = -1
+        If ComboBox_ProductoTPO IsNot Nothing Then ComboBox_ProductoTPO.SelectedIndex = -1
+        If CheckBox_Persistencia IsNot Nothing Then CheckBox_Persistencia.Checked = False
+
+        Me.UseWaitCursor = False
+        Me.Cursor = Cursors.Default
+        If ProcesaTodo Is Not Nothing Then ProcesaTodo.Enabled = True
+    End Sub
+
+    Private Sub ResetCounters()
+        _totalCreados = 0
+        _totalErrores = 0
+    End Sub
+
+    Private Sub IncrementCreados()
+        _totalCreados += 1
+        UpdateLabels()
+    End Sub
+
+    Private Sub IncrementErrores()
+        _totalErrores += 1
+        UpdateLabels()
+    End Sub
+
+    Private Sub ResetLabels()
+        SetLabelText(Label_TotalCreados, "0")
+        SetLabelText(Label_total_errores, "0")
+    End Sub
+
+    Private Sub UpdateLabels()
+        SetLabelText(Label_TotalCreados, _totalCreados.ToString())
+        SetLabelText(Label_total_errores, _totalErrores.ToString())
+    End Sub
+
+    Private Sub SetLabelText(target As Label, value As String)
+        If target Is Nothing Then Return
+        If target.InvokeRequired Then
+            target.BeginInvoke(New Action(Of Label, String)(AddressOf SetLabelText), target, value)
+        Else
+            target.Text = value
+        End If
+    End Sub
 
 End Class

@@ -95,7 +95,7 @@ Namespace Helpers
             Dim pretty As String = FormatJson(json)
             Dim tag As String = "<JSON"
             If Not String.IsNullOrWhiteSpace(label) Then
-                tag &= " label=\" & label & "\"
+                tag &= " label=\"" & label & "\""
             End If
             tag &= ">"
             Dim footer As String = "</JSON>"
@@ -109,6 +109,15 @@ Namespace Helpers
             sb.AppendLine("RESULT:")
             sb.AppendLine(FormatObject(result))
             AppendBlock(_dataTextBox, "<QUERY>", sb.ToString().TrimEnd(), "</QUERY>", False, False, _dataMaxLines)
+        End Sub
+
+        Public Sub Clear(Optional clearFlow As Boolean = True, Optional clearData As Boolean = True)
+            If clearFlow Then
+                ClearTextBox(_flowTextBox)
+            End If
+            If clearData Then
+                ClearTextBox(_dataTextBox)
+            End If
         End Sub
 
         Private Sub LogErrorInternal(message As String, ex As Exception, context As Object)
@@ -174,6 +183,18 @@ Namespace Helpers
             End If
             tb.AppendText(text)
             TrimLines(tb, maxLines)
+        End Sub
+
+        Private Sub ClearTextBox(tb As TextBox)
+            If tb Is Nothing Then Return
+            If _sync IsNot Nothing AndAlso _sync.InvokeRequired Then
+                Try
+                    _sync.BeginInvoke(New Action(Of TextBox)(AddressOf ClearTextBox), New Object() {tb})
+                Catch
+                End Try
+                Return
+            End If
+            tb.Clear()
         End Sub
 
         Private Sub TrimLines(tb As TextBox, maxLines As Integer)
