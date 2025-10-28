@@ -1,0 +1,21 @@
+name,street_type,street_name,neighborhood,city,uf,cep,phone,email
+Orlando Romero,Rua,Odilon Auto,Arapiraca,Arapiraca,AL,57301210,82998765431,orlando.romero@example.com
+Renata Almeida,Avenida,Brasil,Centro,São Paulo,SP,01001000,11987654321,renata.almeida@example.com
+Zuli Carvalho,Rua,Paulo Afonso,Jardim Carapina,Serra,ES,29161709,27998555123,zuli.carvalho@example.com
+Ricardo Silva,Travessa,das Flores,Industrial,Campinas,SP,13010111,19988443322,ricardo.silva@example.com
+Mariana Souza,Rua,XV de Novembro,Centro,Curitiba,PR,80020120,41988776655,mariana.souza@example.com
+Diego Oliveira,Avenida,Atlântica,Copacabana,Rio de Janeiro,RJ,22021001,21999887766,diego.oliveira@example.com
+Ana Santos,Rua,Sete de Setembro,Centro,Salvador,BA,40020000,71998112233,ana.santos@example.com
+Paulo Pereira,Rua,Afonso Pena,Funcionários,Belo Horizonte,MG,30130005,31997766554,paulo.pereira@example.com
+Camila Costa,Avenida,Independência,Jardim,Porto Alegre,RS,90035900,51999123456,camila.costa@example.com
+Felipe Ferreira,Rua,da Assembléia,Centro,Rio de Janeiro,RJ,20011001,21988770011,felipe.ferreira@example.com
+Juliana Rodrigues,Rua,das Acácias,Jardim,Sorocaba,SP,18010000,15998001234,juliana.rodrigues@example.com
+Bruno Lima,Avenida,Getúlio Vargas,Centro,Fortaleza,CE,60060000,85997334455,bruno.lima@example.com
+Patrícia Gomes,Travessa,da Paz,Vila Nova,Belém,PA,66013000,91998111222,patricia.gomes@example.com
+Rafael Ribeiro,Rua,dos Andradas,Centro,Pelotas,RS,96010000,53998990077,rafael.ribeiro@example.com
+Luana Martins,Avenida,Paulista,Bela Vista,São Paulo,SP,01311000,11990077665,luana.martins@example.com
+Gustavo Araújo,Rua,Santos Dumont,Centro,Maceió,AL,57020000,82997003344,gustavo.araujo@example.com
+Carla Mendes,Rua,Bahia,Funcionários,Belo Horizonte,MG,30160011,31996001212,carla.mendes@example.com
+Thiago Barros,Avenida,Beira Mar,Meireles,Fortaleza,CE,60165075,85995007890,thiago.barros@example.com
+Natalia Rocha,Rua,da Praia,Centro,Florianópolis,SC,88010000,48998887766,natalia.rocha@example.com
+Eduardo Pinto,Rua,Floriano Peixoto,Centro,João Pessoa,PB,58010000,83997112233,eduardo.pinto@example.com
