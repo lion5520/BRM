@@ -233,13 +233,13 @@ Public Class CreaCliente
     Private Function ObtenerPoidPorDocumento(doc As String) As String
         Try
             Dim sql As String =
-"SELECT a.poid_id0 AS account_poid
-   FROM pin.account_t a
-   JOIN pin.account_nameinfo_t n ON n.obj_id0 = a.poid_id0
-   JOIN pin.ac_profile_account_t pa ON pa.obj_id0 = a.poid_id0
-  WHERE TRIM(pa.cpf_cnpj) = :p_doc
-  ORDER BY a.poid_id0 DESC
-  FETCH FIRST 1 ROWS ONLY"
+                "SELECT c.poid_id0 AS account_poid
+                FROM PIN.PROFILE_T P, PIN.AC_PROFILE_ACCOUNT_T PA, PIN.ACCOUNT_NAMEINFO_T A, PIN.ACCOUNT_T C
+                WHERE P.ACCOUNT_OBJ_ID0 = A.OBJ_ID0 AND A.OBJ_ID0 = C.POID_ID0
+                AND PA.OBJ_ID0 = P.POID_ID0
+                AND PA.CPF_CNPJ = :p_doc
+                ORDER BY c.poid_id0 DESC
+                FETCH FIRST 1 ROWS ONLY"
             Dim pars As New Dictionary(Of String, Object) From {{":p_doc", doc}}
             Dim dt As DataTable = _db.ExecuteDataTable(sql, pars, 30)
             If dt IsNot Nothing AndAlso dt.Rows.Count > 0 Then

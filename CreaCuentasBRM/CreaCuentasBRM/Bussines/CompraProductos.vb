@@ -5,7 +5,9 @@ Imports System
 Imports System.Net.Http
 Imports System.Text
 Imports System.Threading.Tasks
+Imports System.Collections.Generic
 Imports System.Data
+Imports System.Linq
 Imports Newtonsoft.Json
 Imports Newtonsoft.Json.Linq
 
@@ -182,17 +184,33 @@ Public Class CompraProductos
 
                     LogBlock("=== PURCHASE RESPONSE (ver Log_Debug) ===", body, "PURCHASE_RESPONSE")
 
-                    ' 5) Validación mínima por protocolo (ajusta a tu log/tabla)
-                    Dim ok As Boolean = ValidarCompraEnBdPorProtocolo(protocol)
-                    Dim validationLine As String = "[PURCHASE][VALIDATION] Resultado=" & If(ok, "OK", "SIN REGISTRO")
+                    ' 5) Validaciones posteriores a la compra
+                    Dim okProtocolo As Boolean = ValidarCompraEnBdPorProtocolo(protocol)
+                    Dim validationLine As String = "[PURCHASE][VALIDATION][PROTOCOLO] Resultado=" & If(okProtocolo, "OK", "SIN REGISTRO")
                     OUT(validationLine)
                     LogInfoToLogger("PURCHASE_VALIDATION", validationLine)
-                    r.Success = ok
+                    Dim okProductos As Boolean = ValidarProductosActivosPorAccount(poid)
+                    Dim validationProductsLine As String = "[PURCHASE][VALIDATION][PRODUCTOS] Resultado=" & If(okProductos, "OK", "SIN PRODUCTOS ACTIVOS")
+                    OUT(validationProductsLine)
+                    LogInfoToLogger("PURCHASE_VALIDATION", validationProductsLine)
+
+                    r.Success = okProtocolo AndAlso okProductos
+
                     r.ProtocolId = protocol
                     r.ContractId = contractId
                     r.Terminal = terminal
                     r.HttpStatus = LastHttpStatus
                     r.RawBody = LastResponseBody
+
+                    If Not r.Success Then
+                        If Not okProtocolo Then
+                            ErrorMessage = "No se encontró confirmación de la compra en la bitácora."
+                        ElseIf Not okProductos Then
+                            ErrorMessage = "No se hallaron productos activos para la cuenta tras la compra."
+                        End If
+                    End If
+
+
                 End Using
             End Using
 
@@ -346,5 +364,160 @@ Public Class CompraProductos
         End If
         Return s
     End Function
+
+
+    Private Function ValidarProductosActivosPorAccount(accountPoid As String) As Boolean
+        Dim accountObjId As Long?
+        Try
+            accountObjId = ExtraerAccountObjId(accountPoid)
+        Catch ex As Exception
+            Dim parseErr As String = "[PURCHASE][VALIDATION][PRODUCTOS] Error al interpretar AccountPoid: " & ex.Message
+            OUT(parseErr)
+            LogInfoToLogger("PURCHASE_VALIDATION", parseErr)
+            Return False
+        End Try
+
+        If Not accountObjId.HasValue Then
+            Dim msg As String = "[PURCHASE][VALIDATION][PRODUCTOS] AccountObjId no disponible para validar."
+            OUT(msg)
+            LogInfoToLogger("PURCHASE_VALIDATION", msg)
+            Return False
+        End If
+
+        Try
+            Dim sql As String = String.Join(vbLf, {
+                "SELECT",
+                "DECODE (E.STATUS, 10100, 'ATIVO', 10102,'SUSPENSO', 10103,'CANCELADO') AS STATUS,",
+                "A.ACCOUNT_OBJ_ID0 AS ACCOUNT,",
+                "TO_CHAR((TIMESTAMP '1970-01-01 00:00:00 +00:00' + NUMTODSINTERVAL(A.CREATED_T,'SECOND')) AT TIME ZONE 'GMT','DD.MM.YYYY HH24:MI:SS') AS DT_COMPRA,",
+                "A.STATUS AS STATUS_PRODUTO,",
+                "A.CYCLE_FEE_AMT / 100 AS VALOR,",
+                "A.SERVICE_OBJ_ID0,",
+                "A.SERVICE_OBJ_TYPE AS CLASSE,",
+                "B.CRM_PRODUCT_DESCR,",
+                "B.FLAG_EMBARCADO,",
+                "B.CRM_PRODUCT_ID,",
+                "B.CAT_PRODUCT_ID,",
+                "B.FLAG_INVOL,",
+                "B.COD_ANATEL",
+                "FROM PIN.PURCHASED_PRODUCT_T A",
+                "JOIN PIN.AC_PURCHASED_PRODUCT_T B ON B.PURCHASED_PRODUCT_OBJ_ID0 = A.POID_ID0",
+                "JOIN PIN.SERVICE_T E ON A.SERVICE_OBJ_ID0 = E.POID_ID0",
+                "WHERE A.ACCOUNT_OBJ_ID0 = :acctId",
+                "  AND E.STATUS = 10100",
+                "ORDER BY A.CREATED_T DESC"
+            })
+
+            Dim dt As DataTable = _db.ExecuteDataTable(sql,
+                New Dictionary(Of String, Object) From {{":acctId", accountObjId.Value}}, 40)
+
+            Dim tableText As String = FormatearTabla(dt)
+            LogBlock("=== PURCHASE PRODUCTS (query) ===", tableText, "PURCHASE_PRODUCTS", isJson:=False)
+
+            If dt Is Nothing OrElse dt.Rows.Count = 0 Then Return False
+
+            For Each row As DataRow In dt.Rows
+                Dim statusServicio As String = Convert.ToString(row("STATUS")).Trim()
+                Dim productoActivo As Boolean = EvaluarStatusProducto(row)
+                If String.Equals(statusServicio, "ATIVO", StringComparison.OrdinalIgnoreCase) AndAlso productoActivo Then
+                    Return True
+                End If
+            Next
+
+            Return False
+        Catch ex As Exception
+            Dim err As String = "[PURCHASE][VALIDATION][PRODUCTOS] " & ex.Message
+            OUT(err)
+            LogInfoToLogger("PURCHASE_VALIDATION", err)
+            Return False
+        End Try
+    End Function
+
+    Private Shared Function EvaluarStatusProducto(row As DataRow) As Boolean
+        If row Is Nothing Then Return False
+        Try
+            If row.Table.Columns.Contains("STATUS_PRODUTO") Then
+                Dim raw = row("STATUS_PRODUTO")
+                If raw Is Nothing OrElse raw Is DBNull.Value Then Return False
+                Dim statusInt As Integer
+                If Integer.TryParse(Convert.ToString(raw).Trim(), statusInt) Then
+                    Return (statusInt = 1)
+                End If
+                Dim statusText As String = Convert.ToString(raw).Trim()
+                Return statusText.Equals("ATIVO", StringComparison.OrdinalIgnoreCase)
+            End If
+        Catch
+        End Try
+        Return False
+    End Function
+
+    Private Shared Function FormatearTabla(dt As DataTable) As String
+        If dt Is Nothing OrElse dt.Columns.Count = 0 Then
+            Return "(sin registros)"
+        End If
+
+        Dim cols = dt.Columns.Cast(Of DataColumn)().ToList()
+        Dim widths As New List(Of Integer)(cols.Count)
+        For Each col In cols
+            Dim maxLen As Integer = col.ColumnName.Length
+            For Each row As DataRow In dt.Rows
+                Dim value As String = Convert.ToString(row(col)).Trim()
+                If value.Length > maxLen Then maxLen = value.Length
+            Next
+            widths.Add(Math.Min(Math.Max(maxLen, 3), 120))
+        Next
+
+        Dim sb As New StringBuilder()
+        For i As Integer = 0 To cols.Count - 1
+            Dim header As String = cols(i).ColumnName
+            sb.Append(header.PadRight(widths(i))).Append("  ")
+        Next
+        sb.AppendLine()
+
+        For i As Integer = 0 To cols.Count - 1
+            sb.Append(New String("-"c, widths(i))).Append("  ")
+        Next
+        sb.AppendLine()
+
+        For Each row As DataRow In dt.Rows
+            For i As Integer = 0 To cols.Count - 1
+                Dim val As String = Convert.ToString(row(cols(i))).Trim()
+                If val.Length > widths(i) Then
+                    val = val.Substring(0, widths(i) - 1) & "…"
+                End If
+                sb.Append(val.PadRight(widths(i))).Append("  ")
+            Next
+            sb.AppendLine()
+        Next
+
+        Return sb.ToString().TrimEnd()
+    End Function
+
+    Private Shared Function ExtraerAccountObjId(accountPoid As String) As Long?
+        If String.IsNullOrWhiteSpace(accountPoid) Then Return Nothing
+
+        Dim cleaned As String = accountPoid.Trim()
+
+        Dim idx As Integer = cleaned.IndexOf("/account", StringComparison.OrdinalIgnoreCase)
+        If idx >= 0 Then
+            Dim tail As String = cleaned.Substring(idx + 8).Trim()
+            Dim parts = tail.Split(New Char() {" "c, "/"c}, StringSplitOptions.RemoveEmptyEntries)
+            For Each part In parts
+                Dim value As Long
+                If Long.TryParse(part, value) Then
+                    Return value
+                End If
+            Next
+        End If
+
+        Dim numericOnly As String = New String(cleaned.Where(AddressOf Char.IsDigit).ToArray())
+        Dim parsed As Long
+        If Not String.IsNullOrWhiteSpace(numericOnly) AndAlso Long.TryParse(numericOnly, parsed) Then
+            Return parsed
+        End If
+
+        Return Nothing
+    End Function
+
 
 End Class

@@ -25,6 +25,12 @@ Partial Class FormMain
         Me.TabControl1 = New System.Windows.Forms.TabControl()
         Me.TabPage1 = New System.Windows.Forms.TabPage()
         Me.TabPage2 = New System.Windows.Forms.TabPage()
+        Me.Label5 = New System.Windows.Forms.Label()
+        Me.Label4 = New System.Windows.Forms.Label()
+        Me.Label3 = New System.Windows.Forms.Label()
+        Me.TextBox_NoCuentas = New System.Windows.Forms.NumericUpDown()
+        Me.Label2 = New System.Windows.Forms.Label()
+        Me.Label1 = New System.Windows.Forms.Label()
         Me.Button_limpiar = New System.Windows.Forms.Button()
         Me.Label_total_errores = New System.Windows.Forms.Label()
         Me.Label_TotalCreados = New System.Windows.Forms.Label()
@@ -34,18 +40,12 @@ Partial Class FormMain
         Me.CheckBox_Persistencia = New System.Windows.Forms.CheckBox()
         Me.ProcesaTodo = New System.Windows.Forms.Button()
         Me.TabPage4 = New System.Windows.Forms.TabPage()
-        Me.tst_log_debug = New System.Windows.Forms.TextBox()
-        Me.Label1 = New System.Windows.Forms.Label()
-        Me.Label2 = New System.Windows.Forms.Label()
-        Me.TextBox_NoCuentas = New System.Windows.Forms.NumericUpDown()
-        Me.Label3 = New System.Windows.Forms.Label()
-        Me.Label4 = New System.Windows.Forms.Label()
-        Me.Label5 = New System.Windows.Forms.Label()
         Me.tst_log_out = New System.Windows.Forms.TextBox()
+        Me.tst_log_debug = New System.Windows.Forms.TextBox()
         Me.TabControl1.SuspendLayout()
         Me.TabPage2.SuspendLayout()
-        Me.TabPage4.SuspendLayout()
         CType(Me.TextBox_NoCuentas, System.ComponentModel.ISupportInitialize).BeginInit()
+        Me.TabPage4.SuspendLayout()
         Me.SuspendLayout()
         '
         'TabControl1
@@ -93,6 +93,59 @@ Partial Class FormMain
         Me.TabPage2.Text = "Cuentas"
         Me.TabPage2.UseVisualStyleBackColor = True
         '
+        'Label5
+        '
+        Me.Label5.AutoSize = True
+        Me.Label5.Location = New System.Drawing.Point(34, 324)
+        Me.Label5.Name = "Label5"
+        Me.Label5.Size = New System.Drawing.Size(91, 13)
+        Me.Label5.TabIndex = 14
+        Me.Label5.Text = "Cuentas Erroneas"
+        '
+        'Label4
+        '
+        Me.Label4.AutoSize = True
+        Me.Label4.Location = New System.Drawing.Point(34, 287)
+        Me.Label4.Name = "Label4"
+        Me.Label4.Size = New System.Drawing.Size(88, 13)
+        Me.Label4.TabIndex = 13
+        Me.Label4.Text = "Cuentas Creadas"
+        '
+        'Label3
+        '
+        Me.Label3.AutoSize = True
+        Me.Label3.Location = New System.Drawing.Point(212, 25)
+        Me.Label3.Name = "Label3"
+        Me.Label3.Size = New System.Drawing.Size(104, 13)
+        Me.Label3.TabIndex = 12
+        Me.Label3.Text = "Numero de Cuentas "
+        '
+        'TextBox_NoCuentas
+        '
+        Me.TextBox_NoCuentas.Location = New System.Drawing.Point(215, 43)
+        Me.TextBox_NoCuentas.Name = "TextBox_NoCuentas"
+        Me.TextBox_NoCuentas.Size = New System.Drawing.Size(120, 20)
+        Me.TextBox_NoCuentas.TabIndex = 11
+        Me.TextBox_NoCuentas.Value = New Decimal(New Integer() {1, 0, 0, 0})
+        '
+        'Label2
+        '
+        Me.Label2.AutoSize = True
+        Me.Label2.Location = New System.Drawing.Point(34, 80)
+        Me.Label2.Name = "Label2"
+        Me.Label2.Size = New System.Drawing.Size(71, 13)
+        Me.Label2.TabIndex = 10
+        Me.Label2.Text = "Tipo de Pago"
+        '
+        'Label1
+        '
+        Me.Label1.AutoSize = True
+        Me.Label1.Location = New System.Drawing.Point(34, 25)
+        Me.Label1.Name = "Label1"
+        Me.Label1.Size = New System.Drawing.Size(77, 13)
+        Me.Label1.TabIndex = 9
+        Me.Label1.Text = "Tipo de cliente"
+        '
         'Button_limpiar
         '
         Me.Button_limpiar.Location = New System.Drawing.Point(332, 413)
@@ -123,6 +176,7 @@ Partial Class FormMain
         'ComboBox_ProductoTPO
         '
         Me.ComboBox_ProductoTPO.FormattingEnabled = True
+        Me.ComboBox_ProductoTPO.Items.AddRange(New Object() {"1. CreditCard", "2. Boleto", "3. DAC"})
         Me.ComboBox_ProductoTPO.Location = New System.Drawing.Point(37, 96)
         Me.ComboBox_ProductoTPO.Name = "ComboBox_ProductoTPO"
         Me.ComboBox_ProductoTPO.Size = New System.Drawing.Size(121, 21)
@@ -177,67 +231,6 @@ Partial Class FormMain
         Me.TabPage4.Text = "Log_Debug"
         Me.TabPage4.UseVisualStyleBackColor = True
         '
-        'tst_log_debug
-        '
-        Me.tst_log_debug.Location = New System.Drawing.Point(6, 6)
-        Me.tst_log_debug.Multiline = True
-        Me.tst_log_debug.Name = "tst_log_debug"
-        Me.tst_log_debug.Size = New System.Drawing.Size(530, 488)
-        Me.tst_log_debug.TabIndex = 1
-        '
-        'Label1
-        '
-        Me.Label1.AutoSize = True
-        Me.Label1.Location = New System.Drawing.Point(34, 25)
-        Me.Label1.Name = "Label1"
-        Me.Label1.Size = New System.Drawing.Size(77, 13)
-        Me.Label1.TabIndex = 9
-        Me.Label1.Text = "Tipo de cliente"
-        '
-        'Label2
-        '
-        Me.Label2.AutoSize = True
-        Me.Label2.Location = New System.Drawing.Point(34, 80)
-        Me.Label2.Name = "Label2"
-        Me.Label2.Size = New System.Drawing.Size(71, 13)
-        Me.Label2.TabIndex = 10
-        Me.Label2.Text = "Tipo de Pago"
-        '
-        'TextBox_NoCuentas
-        '
-        Me.TextBox_NoCuentas.Location = New System.Drawing.Point(215, 43)
-        Me.TextBox_NoCuentas.Name = "TextBox_NoCuentas"
-        Me.TextBox_NoCuentas.Size = New System.Drawing.Size(120, 20)
-        Me.TextBox_NoCuentas.TabIndex = 11
-        Me.TextBox_NoCuentas.Value = New Decimal(New Integer() {1, 0, 0, 0})
-        '
-        'Label3
-        '
-        Me.Label3.AutoSize = True
-        Me.Label3.Location = New System.Drawing.Point(212, 25)
-        Me.Label3.Name = "Label3"
-        Me.Label3.Size = New System.Drawing.Size(104, 13)
-        Me.Label3.TabIndex = 12
-        Me.Label3.Text = "Numero de Cuentas "
-        '
-        'Label4
-        '
-        Me.Label4.AutoSize = True
-        Me.Label4.Location = New System.Drawing.Point(34, 287)
-        Me.Label4.Name = "Label4"
-        Me.Label4.Size = New System.Drawing.Size(88, 13)
-        Me.Label4.TabIndex = 13
-        Me.Label4.Text = "Cuentas Creadas"
-        '
-        'Label5
-        '
-        Me.Label5.AutoSize = True
-        Me.Label5.Location = New System.Drawing.Point(34, 324)
-        Me.Label5.Name = "Label5"
-        Me.Label5.Size = New System.Drawing.Size(91, 13)
-        Me.Label5.TabIndex = 14
-        Me.Label5.Text = "Cuentas Erroneas"
-        '
         'tst_log_out
         '
         Me.tst_log_out.Location = New System.Drawing.Point(551, 6)
@@ -245,6 +238,14 @@ Partial Class FormMain
         Me.tst_log_out.Name = "tst_log_out"
         Me.tst_log_out.Size = New System.Drawing.Size(566, 488)
         Me.tst_log_out.TabIndex = 2
+        '
+        'tst_log_debug
+        '
+        Me.tst_log_debug.Location = New System.Drawing.Point(6, 6)
+        Me.tst_log_debug.Multiline = True
+        Me.tst_log_debug.Name = "tst_log_debug"
+        Me.tst_log_debug.Size = New System.Drawing.Size(530, 488)
+        Me.tst_log_debug.TabIndex = 1
         '
         'FormMain
         '
@@ -257,9 +258,9 @@ Partial Class FormMain
         Me.TabControl1.ResumeLayout(False)
         Me.TabPage2.ResumeLayout(False)
         Me.TabPage2.PerformLayout()
+        CType(Me.TextBox_NoCuentas, System.ComponentModel.ISupportInitialize).EndInit()
         Me.TabPage4.ResumeLayout(False)
         Me.TabPage4.PerformLayout()
-        CType(Me.TextBox_NoCuentas, System.ComponentModel.ISupportInitialize).EndInit()
         Me.ResumeLayout(False)
 
     End Sub

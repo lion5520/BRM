@@ -416,3 +416,6 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+CreaCuentasBRM/CreaCuentasBRM/bin/
+CreaCuentasBRM/CreaCuentasBRM/obj/
+CreaCuentasBRM/.vs/
