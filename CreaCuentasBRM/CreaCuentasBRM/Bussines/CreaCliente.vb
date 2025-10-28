@@ -103,7 +103,58 @@ Public Class CreaCliente
                     Dim doc As String = payload.Value(Of String)("AC_FLD_CPF_CNPJ")
                     result.Documento = doc
                     result.ProtocolId = payload.Value(Of String)("AC_FLD_PROTOCOL_ID")
-                    Dim poid As String = ObtenerPoidPorDocumento(doc)
+                    Dim poid As String = String.Empty
+                    Const maxValidationAttempts As Integer = 5
+                    For attempt As Integer = 1 To maxValidationAttempts
+                        poid = ObtenerPoidPorDocumento(doc)
+                        If Not String.IsNullOrWhiteSpace(poid) Then
+                            Dim successMsg As String = String.Format("[CREATE][CHECK] intento {0}: confirmado account_poid.", attempt)
+                            OUT(successMsg)
+                            If _logger IsNot Nothing Then
+                                Try
+                                    _logger.LogData(New With {
+                                        .Operacion = "CrearCliente.ValidacionCuenta",
+                                        .Intento = attempt,
+                                        .AccountPoid = poid
+                                    }, "CREATE_CHECK")
+                                Catch
+                                End Try
+                            End If
+                            Exit For
+                        End If
+
+                        Dim pendingMsg As String = String.Format("[CREATE][CHECK] intento {0} sin confirmación. Esperando 2s...", attempt)
+                        OUT(pendingMsg)
+                        If _logger IsNot Nothing Then
+                            Try
+                                _logger.LogData(New With {
+                                    .Operacion = "CrearCliente.ValidacionCuenta",
+                                    .Intento = attempt,
+                                    .Estado = "Retry",
+                                    .Documento = doc
+                                }, "CREATE_CHECK")
+                            Catch
+                            End Try
+                        End If
+
+                        If attempt < maxValidationAttempts Then
+                            Await Task.Delay(TimeSpan.FromSeconds(2)).ConfigureAwait(False)
+                        End If
+                    Next
+
+                    If String.IsNullOrWhiteSpace(poid) Then
+                        OUT("[CREATE][ERROR] AccountPoid no confirmado tras múltiples intentos.")
+                        If _logger IsNot Nothing Then
+                            Try
+                                _logger.LogError("AccountPoid no disponible tras validación en base de datos.", Nothing, New With {
+                                    .Operacion = "CrearCliente.ValidacionCuenta",
+                                    .Intentos = maxValidationAttempts,
+                                    .Documento = doc
+                                })
+                            Catch
+                            End Try
+                        End If
+                    End If
 
                     result.AccountPoid = poid
                     result.HttpStatus = LastHttpStatus
