@@ -35,3 +35,4 @@ C:\Users\Lion\Desktop\BRM_CREATE_ACCOUNTS\CreaCuentasBRM\CreaCuentasBRM\bin\Debu
 C:\Users\Lion\Desktop\BRM_CREATE_ACCOUNTS\CreaCuentasBRM\CreaCuentasBRM\obj\Debug\CreaCuentasBRM.exe
 C:\Users\Lion\Desktop\BRM_CREATE_ACCOUNTS\CreaCuentasBRM\CreaCuentasBRM\obj\Debug\CreaCuentasBRM.pdb
 C:\Users\Lion\Desktop\BRM_CREATE_ACCOUNTS\CreaCuentasBRM\CreaCuentasBRM\obj\Debug\CreaCuentasBRM.FormMain.resources
+C:\Users\Lion\Desktop\BRM_CREATE_ACCOUNTS\CreaCuentasBRM\CreaCuentasBRM\bin\Debug\seeds_clientes_br.csv

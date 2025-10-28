@@ -245,7 +245,7 @@ Public Class FormMain
             ProgressBar_general.Refresh()
         End If
 
-        TextBox_NoCuentas?.Clear()
+        TextBox_NoCuentas?.ResetText()
         ComboBox_ClienteTPO?.ResetText()
         ComboBox_ProductoTPO?.ResetText()
         If ComboBox_ClienteTPO IsNot Nothing Then ComboBox_ClienteTPO.SelectedIndex = -1
@@ -254,7 +254,7 @@ Public Class FormMain
 
         Me.UseWaitCursor = False
         Me.Cursor = Cursors.Default
-        If ProcesaTodo Is Not Nothing Then ProcesaTodo.Enabled = True
+        If ProcesaTodo IsNot Nothing Then ProcesaTodo.Enabled = True
     End Sub
 
     Private Sub ResetCounters()

@@ -22,24 +22,13 @@ CreaCuentasBRM
   resource lookups using this strongly typed resource class.
 </summary>
 </member>
-<member name="M:CreaCuentasBRM.CreaCliente.CrearAsync(CreaCuentasBRM.CreaCliente.TipoCliente,System.String,System.Boolean)">
+<member name="T:CreaCuentasBRM.Helpers.DualTextBoxLogger">
  <summary>
- Crea un cliente PF/PJ. Si persist=False NO llama al endpoint (solo loguea el JSON).
- Devuelve Success + AccountPoid (validado en BD) o Success=False.
+ Logger que distribuye mensajes entre dos TextBox (flujo y datos) manteniendo sincronización de UI
+ e implementa <see cref="T:CreaCuentasBRM.IAppLogger"/> para reutilizar toda la infraestructura existente.
  </summary>
 </member>
-<member name="T:CreaCuentasBRM.CreaCuentasBRM.UiTextBoxLogger">
- <summary>
- Logger para enviar texto a 1 o 2 TextBox del formulario con sincronización de UI.
- Métodos: AttachPrimary, AttachSecondary, WriteDebug, WriteData.
- </summary>
-</member>
-<member name="M:CreaCuentasBRM.CreaCuentasBRM.UiTextBoxLogger.AttachSecondary(System.ComponentModel.ISynchronizeInvoke,System.Windows.Forms.TextBox)">
- <summary>
- Segundo TextBox para volcar JSON, respuestas, consultas, etc.
- </summary>
-</member>
-<member name="M:CreaCuentasBRM.JsonLogHelper.Minify(System.String)">
+<member name="M:CreaCuentasBRM.JsonLogHelper.Pretty(System.String)">
  <summary>
  Minifica un JSON sin romper contenido entre comillas (quita espacios y saltos fuera de strings).
  </summary>
