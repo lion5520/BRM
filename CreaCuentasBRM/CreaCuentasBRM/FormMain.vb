@@ -3,13 +3,14 @@ Option Explicit On
 
 Imports System
 Imports System.Threading.Tasks
+Imports CreaCuentasBRM.Helpers
 
 Public Class FormMain
 
     Private ReadOnly _creador As New CreaCliente()
     Private ReadOnly _comprador As New CompraProductos()
     Private ReadOnly _bole As New BolecodeResponse()
-    Private _debugLogger As UiTextBoxLogger
+    Private _appLogger As DualTextBoxLogger
 
     Private Sub FormMain_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         ' Engancha canal OUT
@@ -17,11 +18,13 @@ Public Class FormMain
         _comprador.OnOut = AddressOf OutSink
         _bole.OnOut = AddressOf OutSink
 
-        If tst_log_debug IsNot Nothing AndAlso _debugLogger Is Nothing Then
-            _debugLogger = New UiTextBoxLogger(Me, tst_log_debug)
-            _creador.Logger = _debugLogger
-            _comprador.Logger = _debugLogger
-            _bole.Logger = _debugLogger
+        If _appLogger Is Nothing Then
+            _appLogger = New DualTextBoxLogger()
+            _appLogger.AttachFlow(Me, tst_log_out)
+            _appLogger.AttachData(Me, tst_log_debug)
+            _creador.Logger = _appLogger
+            _comprador.Logger = _appLogger
+            _bole.Logger = _appLogger
         End If
 
         If ProgressBar_general IsNot Nothing Then
@@ -38,8 +41,10 @@ Public Class FormMain
             Me.BeginInvoke(New Action(Of String)(AddressOf OutSink), line)
             Return
         End If
-        If tst_log_out IsNot Nothing Then
-            tst_log_out.AppendText(line & Environment.NewLine)
+        If _appLogger IsNot Nothing Then
+            _appLogger.WriteFlow(line)
+        ElseIf tst_log_out IsNot Nothing Then
+            tst_log_out.AppendText(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff") & " " & line & Environment.NewLine)
         End If
     End Sub
 
@@ -48,8 +53,8 @@ Public Class FormMain
             Me.BeginInvoke(New Action(Of String)(AddressOf AppendDebug), line)
             Return
         End If
-        If _debugLogger IsNot Nothing Then
-            _debugLogger.LogData(line, "FLOW")
+        If _appLogger IsNot Nothing Then
+            _appLogger.LogData(line, "FLOW")
         ElseIf tst_log_debug IsNot Nothing Then
             tst_log_debug.AppendText(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff") & " " & line & Environment.NewLine)
         End If
@@ -72,30 +77,33 @@ Public Class FormMain
             Dim doPersist As Boolean = (CheckBox_Persistencia IsNot Nothing AndAlso CheckBox_Persistencia.Checked)
 
             Dim nCuentas As Integer = 1
-            If TextBox_NoCuentas IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(TextBox_NoCuentas.Text) Then
+            If TextBox_NoCuentas Is Not Nothing AndAlso Not String.IsNullOrWhiteSpace(TextBox_NoCuentas.Text) Then
                 Dim tmp As Integer
                 If Integer.TryParse(TextBox_NoCuentas.Text.Trim(), tmp) AndAlso tmp > 0 Then nCuentas = tmp
             End If
 
             AppendDebug("[DATA] [FLOW] Inicio. Cuentas=" & nCuentas.ToString() & " Persistencia=" & doPersist.ToString())
 
+            Dim totalSteps As Integer = Math.Max(1, nCuentas * 3)
+            Dim currentStep As Integer = 0
             If ProgressBar_general IsNot Nothing Then
                 ProgressBar_general.Minimum = 0
-                ProgressBar_general.Maximum = Math.Max(1, nCuentas * 3)
+                ProgressBar_general.Maximum = totalSteps
                 ProgressBar_general.Value = 0
                 ProgressBar_general.Refresh()
             End If
+
+            Dim aborted As Boolean = False
+            Dim abortMessage As String = String.Empty
 
             For i As Integer = 1 To nCuentas
                 AppendDebug("[DATA] [FLOW] --- INICIO #" & i.ToString() & "/" & nCuentas.ToString() & " ---")
 
                 If ProgressBar_general IsNot Nothing Then
-                    Dim baseStep As Integer = (i - 1) * 3
-                    ProgressBar_general.Value = Math.Min(ProgressBar_general.Maximum, baseStep)
+                    ProgressBar_general.Value = Math.Min(ProgressBar_general.Maximum, currentStep)
                     ProgressBar_general.Refresh()
                 End If
 
-                ' Tipo cliente desde combo
                 Dim tipoCliente As CreaCliente.TipoCliente = CreaCliente.TipoCliente.PF
                 If ComboBox_ClienteTPO IsNot Nothing AndAlso ComboBox_ClienteTPO.SelectedItem IsNot Nothing Then
                     Dim s As String = ComboBox_ClienteTPO.SelectedItem.ToString().Trim().ToUpperInvariant()
@@ -103,83 +111,99 @@ Public Class FormMain
                 End If
                 AppendDebug("[DATA] [FLOW] Tipo Cliente: " & tipoCliente.ToString())
 
-                ' Crear
                 AppendDebug("[DEBUG] [CREATE] Llamando CreaCliente…")
                 Dim rc As CrearClienteResult = Await _creador.CrearAsync(tipoCliente, Nothing, doPersist)
                 If rc Is Nothing OrElse Not rc.Success Then
-                    AppendDebug("[DEBUG] [ABORT] " & If(String.IsNullOrWhiteSpace(_creador.ErrorMessage),
-                                                         "No se pudo crear el cliente. Proceso detenido.",
-                                                         _creador.ErrorMessage))
-                    AppendDebug("[DEBUG] [DONE] Proceso interrumpido antes de completar los pasos.")
-                    If ProgressBar_general IsNot Nothing Then
-                        ProgressBar_general.Value = 0
-                        ProgressBar_general.Refresh()
+                    Dim detalle As String = If(String.IsNullOrWhiteSpace(_creador.ErrorMessage), "No se pudo crear el cliente.", _creador.ErrorMessage)
+                    abortMessage = "[CREAR CUENTA] " & detalle
+                    AppendDebug("[DEBUG] [ABORT] " & detalle)
+                    aborted = True
+                    If _appLogger IsNot Nothing Then
+                        _appLogger.LogError(detalle, Nothing, New With {.Etapa = "CrearCuenta", .Iteracion = i})
                     End If
-                    Exit Sub
+                    Exit For
                 End If
+                currentStep += 1
                 If ProgressBar_general IsNot Nothing Then
-                    ProgressBar_general.Value = Math.Min(ProgressBar_general.Maximum, ProgressBar_general.Value + 1)
+                    ProgressBar_general.Value = Math.Min(ProgressBar_general.Maximum, currentStep)
                     ProgressBar_general.Refresh()
                 End If
 
-                ' Tipo compra
                 Dim pay As CompraProductos.PayType = CompraProductos.PayType.Boleto
                 If ComboBox_ProductoTPO IsNot Nothing AndAlso ComboBox_ProductoTPO.SelectedItem IsNot Nothing Then
                     Dim p As String = ComboBox_ProductoTPO.SelectedItem.ToString().Trim().ToUpperInvariant()
                     Select Case p
-                        Case "CREDITCARD", "CREDIT CARD", "CC" : pay = CompraProductos.PayType.CreditCard
-                        Case "DAC" : pay = CompraProductos.PayType.DAC
-                        Case Else : pay = CompraProductos.PayType.Boleto
+                        Case "CREDITCARD", "CREDIT CARD", "CC"
+                            pay = CompraProductos.PayType.CreditCard
+                        Case "DAC"
+                            pay = CompraProductos.PayType.DAC
+                        Case Else
+                            pay = CompraProductos.PayType.Boleto
                     End Select
                 End If
 
-                ' Comprar
                 AppendDebug("[DEBUG] [PURCHASE] Llamando CompraProductos…")
                 Dim rb As CompraProductosResult = Await _comprador.ComprarAsync(rc.AccountPoid, pay, doPersist, Nothing)
                 If rb Is Nothing OrElse Not rb.Success Then
-                    AppendDebug("[DEBUG] [ABORT] " & If(String.IsNullOrWhiteSpace(_comprador.ErrorMessage),
-                                                         "No se pudo realizar la compra. Proceso detenido.",
-                                                         _comprador.ErrorMessage))
-                    AppendDebug("[DEBUG] [DONE] Proceso interrumpido antes de completar los pasos.")
-                    If ProgressBar_general IsNot Nothing Then
-                        ProgressBar_general.Value = 0
-                        ProgressBar_general.Refresh()
+                    Dim detalleCompra As String = If(String.IsNullOrWhiteSpace(_comprador.ErrorMessage), "No se pudo realizar la compra.", _comprador.ErrorMessage)
+                    abortMessage = "[COMPRA PRODUCTOS] " & detalleCompra
+                    AppendDebug("[DEBUG] [ABORT] " & detalleCompra)
+                    aborted = True
+                    If _appLogger IsNot Nothing Then
+                        _appLogger.LogError(detalleCompra, Nothing, New With {.Etapa = "CompraProductos", .Iteracion = i, .Account = rc.AccountPoid})
                     End If
-                    Exit Sub
+                    Exit For
                 End If
+                currentStep += 1
                 If ProgressBar_general IsNot Nothing Then
-                    ProgressBar_general.Value = Math.Min(ProgressBar_general.Maximum, ProgressBar_general.Value + 1)
+                    ProgressBar_general.Value = Math.Min(ProgressBar_general.Maximum, currentStep)
                     ProgressBar_general.Refresh()
                 End If
 
-                ' Bolecode
                 AppendDebug("[DEBUG] [PAYMENT] Llamando BolecodeResponse…")
                 Dim rp As BolecodeResponseResult = Await _bole.ActualizarAsync(rc.AccountPoid, doPersist)
                 If rp Is Nothing OrElse Not rp.Success Then
-                    AppendDebug("[DEBUG] [ABORT] " & If(String.IsNullOrWhiteSpace(_bole.ErrorMessage),
-                                                         "No se pudo actualizar bolecode. Proceso detenido.",
-                                                         _bole.ErrorMessage))
-                    AppendDebug("[DEBUG] [DONE] Proceso interrumpido antes de completar los pasos.")
-                    If ProgressBar_general IsNot Nothing Then
-                        ProgressBar_general.Value = 0
-                        ProgressBar_general.Refresh()
+                    Dim detallePago As String = If(String.IsNullOrWhiteSpace(_bole.ErrorMessage), "No se pudo actualizar la información de pago.", _bole.ErrorMessage)
+                    abortMessage = "[ACTUALIZAR DATOS] " & detallePago
+                    AppendDebug("[DEBUG] [ABORT] " & detallePago)
+                    aborted = True
+                    If _appLogger IsNot Nothing Then
+                        _appLogger.LogError(detallePago, Nothing, New With {.Etapa = "ActualizarDatos", .Iteracion = i, .Account = rc.AccountPoid})
                     End If
-                    Exit Sub
+                    Exit For
                 End If
 
+                currentStep += 1
                 If ProgressBar_general IsNot Nothing Then
-                    ProgressBar_general.Value = Math.Min(ProgressBar_general.Maximum, ProgressBar_general.Value + 1)
+                    ProgressBar_general.Value = Math.Min(ProgressBar_general.Maximum, currentStep)
                     ProgressBar_general.Refresh()
                 End If
                 AppendDebug("[DATA] [FLOW] Iteración #" & i.ToString() & " completada.")
             Next
 
-            AppendDebug("[DATA] [DONE] Proceso completado.")
+            If aborted Then
+                AppendDebug("[DEBUG] [DONE] Proceso interrumpido antes de completar los pasos.")
+                If ProgressBar_general IsNot Nothing Then
+                    ProgressBar_general.Value = Math.Min(ProgressBar_general.Maximum, currentStep)
+                    ProgressBar_general.Refresh()
+                End If
+                If Not String.IsNullOrWhiteSpace(abortMessage) Then
+                    MessageBox.Show(Me, abortMessage, "Proceso interrumpido", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                End If
+            Else
+                AppendDebug("[DATA] [DONE] Proceso completado.")
+                If ProgressBar_general IsNot Nothing Then
+                    ProgressBar_general.Value = ProgressBar_general.Maximum
+                    ProgressBar_general.Refresh()
+                End If
+            End If
         Catch ex As Exception
             AppendDebug("[ERROR] " & ex.Message)
-            If _debugLogger IsNot Nothing Then
-                _debugLogger.LogError(ex.Message, ex)
+            If _appLogger IsNot Nothing Then
+                _appLogger.LogError(ex, New With {.Operacion = "ProcesaTodo"})
             End If
+            MessageBox.Show(Me, ex.Message, "Error inesperado", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        
         Finally
             Me.UseWaitCursor = previousUseWait
             Me.Cursor = previousCursor

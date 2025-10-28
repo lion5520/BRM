@@ -75,8 +75,7 @@ Public Class BolecodeResponse
             }
             Dim json As String = payload.ToString()
             LastRequestJson = json
-            OUT(">>> [BOLECODE][JSON]")
-            OUT(LastRequestJson)
+            OUT(">>> [BOLECODE][JSON] payload disponible en Log_Debug.")
             LogJsonToLogger("BOLECODE_REQUEST", json)
 
             If Not persist Then
@@ -100,8 +99,7 @@ Public Class BolecodeResponse
                     LastResponseBody = body
 
                     OUT("<<< [BOLECODE][HTTP] " & LastHttpStatus.GetValueOrDefault().ToString())
-                    OUT("<<< [BOLECODE][RESP]")
-                    OUT(LastResponseBody)
+                    OUT("<<< [BOLECODE][RESP] respuesta disponible en Log_Debug.")
                     LogInfoToLogger("BOLECODE_HTTP", "<<< [BOLECODE][HTTP] " & LastHttpStatus.GetValueOrDefault().ToString())
                     LogJsonToLogger("BOLECODE_RESPONSE", body)
 
@@ -119,7 +117,7 @@ Public Class BolecodeResponse
             LogInfoToLogger("BOLECODE_ERROR", "[BOLECODE][ERROR] " & ErrorMessage)
             If _logger IsNot Nothing Then
                 Try
-                    _logger.LogError(ErrorMessage, ex)
+                    _logger.LogError(ErrorMessage, ex, New With {.Operacion = "BolecodeResponse"})
                 Catch
                 End Try
             End If

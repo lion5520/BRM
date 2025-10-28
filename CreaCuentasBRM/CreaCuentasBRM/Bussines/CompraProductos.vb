@@ -49,12 +49,11 @@ Public Class CompraProductos
             OUT(header)
             LogInfoToLogger(scope, header)
         End If
-        Dim formatted As String = If(isJson, FormatJsonForLog(body), body)
-        LogMultiline(formatted)
         If isJson Then
             LogJsonToLogger(scope, body)
         Else
-            LogInfoToLogger(scope, formatted)
+            LogMultiline(body)
+            LogInfoToLogger(scope, body)
         End If
     End Sub
 
@@ -150,7 +149,7 @@ Public Class CompraProductos
             OUT(payTypeLine)
             LogInfoToLogger("PURCHASE", payTypeLine)
 
-            LogBlock("=== PURCHASE REQUEST ===", LastRequestJson, "PURCHASE_REQUEST")
+            LogBlock("=== PURCHASE REQUEST (ver Log_Debug) ===", LastRequestJson, "PURCHASE_REQUEST")
 
             If Not persist Then
                 r.Success = True
@@ -181,7 +180,7 @@ Public Class CompraProductos
                     OUT(statusLine)
                     LogInfoToLogger("PURCHASE_HTTP", statusLine)
 
-                    LogBlock("=== PURCHASE RESPONSE ===", body, "PURCHASE_RESPONSE")
+                    LogBlock("=== PURCHASE RESPONSE (ver Log_Debug) ===", body, "PURCHASE_RESPONSE")
 
                     ' 5) Validación mínima por protocolo (ajusta a tu log/tabla)
                     Dim ok As Boolean = ValidarCompraEnBdPorProtocolo(protocol)

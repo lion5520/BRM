@@ -67,8 +67,7 @@ Public Class CreaCliente
             Dim json As String = payload.ToString(Formatting.None)
             LastRequestJson = json
             LogRequest(json)
-            OUT(">>> [CREATE][JSON]")
-            OUT(LastRequestJson)
+            OUT(">>> [CREATE][JSON] payload disponible en Log_Debug.")
 
             If Not persist Then
                 result.Success = True
@@ -92,8 +91,13 @@ Public Class CreaCliente
                     LastResponseBody = body
 
                     OUT("<<< [CREATE][HTTP] " & LastHttpStatus.GetValueOrDefault().ToString())
-                    OUT("<<< [CREATE][RESP]")
-                    OUT(LastResponseBody)
+                    OUT("<<< [CREATE][RESP] respuesta disponible en Log_Debug.")
+                    If _logger IsNot Nothing Then
+                        Try
+                            _logger.LogJson(body, "CREATE_RESPONSE")
+                        Catch
+                        End Try
+                    End If
 
                     ' 3) Validar en BD por CPF/CNPJ
                     Dim doc As String = payload.Value(Of String)("AC_FLD_CPF_CNPJ")
@@ -111,6 +115,12 @@ Public Class CreaCliente
         Catch ex As Exception
             ErrorMessage = ex.Message
             OUT("[CREATE][ERROR] " & ErrorMessage)
+            If _logger IsNot Nothing Then
+                Try
+                    _logger.LogError(ErrorMessage, ex, New With {.Operacion = "CrearCliente"})
+                Catch
+                End Try
+            End If
             result.Success = False
             result.HttpStatus = LastHttpStatus
             result.RawBody = LastResponseBody
