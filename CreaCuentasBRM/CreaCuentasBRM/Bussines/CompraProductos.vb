@@ -242,7 +242,129 @@ Public Class CompraProductos
         o("AC_FLD_CONTRACT_ID") = contractId
         o("AC_FLD_STR_COD_TERMINAL") = terminal
         o("PIN_FLD_PAY_TYPE") = pinPayType
-        ' TODO: agrega campos fijos restantes si tu API lo pide
+
+        If pinPayType = -2 Then
+            o("PIN_FLD_BILLINFO_OBJ") = "0.0.0.1 /billinfo -1 0"
+            o("AC_FLD_NSU_CIELO") = "123"
+            o("AC_FLD_REASON_CODE") = "1"
+            o("AC_FLD_PURCHASE_SOURCE") = "Testes Oracle SAP"
+            o("AC_FLD_TRANSACTION_ID") = "618648749606489351"
+            o("AC_FLD_AUTHORIZATION_NO") = "12345"
+            o("AC_FLD_PARCELA") = 1
+            o("AC_FLD_REUSO_FLAG") = 0
+
+            Dim payinfo As New JArray(
+                New JObject(
+                    New JProperty("PIN_FLD_POID", "0.0.0.1 /payinfo -1 0"),
+                    New JProperty("AC_FLD_PAYINFO_BOLETO",
+                        New JObject(
+                            New JProperty("AC_FLD_AGENT_ID", "0")
+                        ))
+                )
+            )
+            o("PIN_FLD_PAYINFO") = payinfo
+
+            Dim products As New JArray()
+
+            products.Add(New JObject(
+                New JProperty("PIN_FLD_PRODUCT_OBJ", "Banda Larga"),
+                New JProperty("AC_FLD_CRM_PRODUCT_ID", "802U600000b6jVOIAY"),
+                New JProperty("AC_FLD_CRM_PRODUCT_DESCR", "Fibra 500 Mega"),
+                New JProperty("CYCLE_FEE_AMT", 4966),
+                New JProperty("CYCLE_START_T", "0"),
+                New JProperty("AC_FLD_COD_ANATEL", "SCM004"),
+                New JProperty("AC_FLD_ID_OFERTA", "BL_500_OFFER"),
+                New JProperty("AC_FLD_FLAG_VISIBILITY", 1),
+                New JProperty("AC_FLD_CAT_PRODUCT_ID", "BL_500MB"),
+                New JProperty("AC_FLD_VELOCITY", "500"),
+                New JProperty("AC_FLD_FIDELIZACAO", "Fidelização Anual")
+            ))
+
+            products.Add(New JObject(
+                New JProperty("PIN_FLD_PRODUCT_OBJ", "SVA"),
+                New JProperty("AC_FLD_CRM_PRODUCT_ID", "169839172669bPBAAX"),
+                New JProperty("AC_FLD_CRM_PRODUCT_DESCR", "Nio Leitura"),
+                New JProperty("CYCLE_FEE_AMT", 990),
+                New JProperty("AC_FLD_COD_ANATEL", "Anatel_SVA"),
+                New JProperty("AC_FLD_ID_OFERTA", "Fibra_SVA"),
+                New JProperty("AC_ID_OFERTA", "1"),
+                New JProperty("AC_FLD_FLAG_VISIBILITY", "1"),
+                New JProperty("AC_FLD_FLAG_EMBARCADO", "Embarcado"),
+                New JProperty("AC_FLD_INCIDENCIA", "Banda Larga"),
+                New JProperty("AC_FLD_CAT_PRODUCT_ID", "OI_LTR")
+            ))
+
+            products.Add(New JObject(
+                New JProperty("PIN_FLD_PRODUCT_OBJ", "SVA"),
+                New JProperty("AC_FLD_CRM_PRODUCT_ID", "802HZ000006Jh6HYAS"),
+                New JProperty("AC_FLD_CRM_PRODUCT_DESCR", "Nio Livros"),
+                New JProperty("CYCLE_FEE_AMT", 2060),
+                New JProperty("AC_FLD_COD_ANATEL", "Anatel_SVA"),
+                New JProperty("AC_FLD_ID_OFERTA", "Fibra_SVA"),
+                New JProperty("AC_ID_OFERTA", "1"),
+                New JProperty("AC_FLD_FLAG_VISIBILITY", "1"),
+                New JProperty("AC_FLD_FLAG_EMBARCADO", "Embarcado"),
+                New JProperty("AC_FLD_INCIDENCIA", "Banda Larga"),
+                New JProperty("AC_FLD_CAT_PRODUCT_ID", "OI_LVR")
+            ))
+
+            products.Add(New JObject(
+                New JProperty("PIN_FLD_PRODUCT_OBJ", "SVA_NN_SAUDE"),
+                New JProperty("AC_FLD_CRM_PRODUCT_ID", "80202000000z433AAA"),
+                New JProperty("AC_FLD_CRM_PRODUCT_DESCR", "SulAmérica Docway Telemedicina"),
+                New JProperty("CYCLE_FEE_AMT", 1990),
+                New JProperty("AC_FLD_COD_ANATEL", ""),
+                New JProperty("AC_FLD_ID_OFERTA", ""),
+                New JProperty("AC_ID_OFERTA", "1"),
+                New JProperty("AC_FLD_FLAG_VISIBILITY", "1"),
+                New JProperty("AC_FLD_FLAG_EMBARCADO", "Avulso"),
+                New JProperty("AC_FLD_INCIDENCIA", "Banda Larga"),
+                New JProperty("AC_FLD_CAT_PRODUCT_ID", "SVA_SULAMERICA")
+            ))
+
+            products.Add(New JObject(
+                New JProperty("PIN_FLD_PRODUCT_OBJ", "SVA"),
+                New JProperty("AC_FLD_CRM_PRODUCT_ID", "SIGTESTE0000000003"),
+                New JProperty("AC_FLD_CRM_PRODUCT_DESCR", "Nio Expert Presencial"),
+                New JProperty("CYCLE_FEE_AMT", 1490),
+                New JProperty("AC_FLD_COD_ANATEL", "Anatel_Experts"),
+                New JProperty("AC_FLD_ID_OFERTA", "Fibra_SVA"),
+                New JProperty("AC_ID_OFERTA", "1"),
+                New JProperty("AC_FLD_FLAG_VISIBILITY", "1"),
+                New JProperty("AC_FLD_FLAG_EMBARCADO", "Embarcado"),
+                New JProperty("AC_FLD_INCIDENCIA", "Banda Larga"),
+                New JProperty("AC_FLD_CAT_PRODUCT_ID", "SIGTESTE0000000003")
+            ))
+
+            products.Add(New JObject(
+                New JProperty("PIN_FLD_PRODUCT_OBJ", "Multas"),
+                New JProperty("AC_FLD_CRM_PRODUCT_ID", "102500479430154906"),
+                New JProperty("AC_FLD_CRM_PRODUCT_DESCR", "Multa cancelamento"),
+                New JProperty("CYCLE_FEE_AMT", 2590),
+                New JProperty("CYCLE_START_T", "0"),
+                New JProperty("AC_FLD_COD_ANATEL", "Anatel_multa"),
+                New JProperty("AC_FLD_ID_OFERTA", "-"),
+                New JProperty("AC_FLD_FLAG_VISIBILITY", 1),
+                New JProperty("AC_FLD_FLAG_EMBARCADO", "Avulso"),
+                New JProperty("AC_FLD_INCIDENCIA", "Banda Larga"),
+                New JProperty("AC_FLD_CAT_PRODUCT_ID", "XXXXXX")
+            ))
+
+            products.Add(New JObject(
+                New JProperty("PIN_FLD_PRODUCT_OBJ", "VoIP"),
+                New JProperty("AC_FLD_CRM_PRODUCT_ID", "80288000006BmXOAA0"),
+                New JProperty("AC_FLD_CRM_PRODUCT_DESCR", "Fixo"),
+                New JProperty("CYCLE_FEE_AMT", 2990),
+                New JProperty("AC_FLD_COD_ANATEL", "STFC001_002_003"),
+                New JProperty("AC_FLD_FLAG_VISIBILITY", "1"),
+                New JProperty("AC_FLD_FLAG_EMBARCADO", "Avulso"),
+                New JProperty("AC_FLD_CAT_PRODUCT_ID", "VOIP_FIXOILIMITADO"),
+                New JProperty("AC_FLD_STR_COD_TERMINAL", terminal)
+            ))
+
+            o("PIN_FLD_PRODUCTS") = products
+        End If
+
         Return o
     End Function
 
