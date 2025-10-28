@@ -22,12 +22,6 @@ CreaCuentasBRM
   resource lookups using this strongly typed resource class.
 </summary>
 </member>
-<member name="M:CreaCuentasBRM.CreaCliente.CrearAsync(CreaCuentasBRM.CreaCliente.TipoCliente,System.String,System.Boolean)">
- <summary>
- Crea un cliente PF/PJ. Si persist=False NO llama al endpoint (solo loguea el JSON).
- Devuelve Success + AccountPoid (validado en BD) o Success=False.
- </summary>
-</member>
 <member name="T:CreaCuentasBRM.CreaCuentasBRM.UiTextBoxLogger">
  <summary>
  Logger para enviar texto a 1 o 2 TextBox del formulario con sincronización de UI.

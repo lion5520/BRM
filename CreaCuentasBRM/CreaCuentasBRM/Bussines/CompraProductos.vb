@@ -41,33 +41,6 @@ Public Class CompraProductos
         End Try
     End Sub
 
-    Private Sub LogBlock(header As String, body As String)
-        If Not String.IsNullOrWhiteSpace(header) Then
-            OUT(header)
-        End If
-        LogMultiline(body)
-    End Sub
-
-    Private Sub LogMultiline(body As String)
-        If String.IsNullOrWhiteSpace(body) Then Return
-
-        Dim normalized As String = body.Replace(vbCrLf, vbLf).Replace(vbCr, vbLf)
-        Dim lines = normalized.Split(New String() {vbLf}, StringSplitOptions.None)
-        For Each line In lines
-            OUT(line)
-        Next
-    End Sub
-
-    Private Shared Function FormatJsonForLog(raw As String) As String
-        If String.IsNullOrWhiteSpace(raw) Then Return raw
-        Try
-            Dim token As JToken = JToken.Parse(raw)
-            Return token.ToString(Formatting.Indented)
-        Catch
-            Return raw
-        End Try
-    End Function
-
     ' ===== API =====
     Public Async Function ComprarAsync(accountPoid As String,
                                        tipo As PayType,
@@ -98,10 +71,8 @@ Public Class CompraProductos
             Dim json As String = payload.ToString(Formatting.None)
 
             LastRequestJson = json
-            OUT("[PURCHASE] AccountPoid=" & poid)
-            OUT("[PURCHASE] Protocol=" & protocol & " Contract=" & contractId & " Terminal=" & terminal)
-            OUT("[PURCHASE] PayTypePin=" & pinPayType.ToString())
-            LogBlock("=== PURCHASE REQUEST ===", FormatJsonForLog(LastRequestJson))
+            OUT(">>> [PURCHASE][JSON]")
+            OUT(LastRequestJson)
 
             If Not persist Then
                 r.Success = True
@@ -114,7 +85,6 @@ Public Class CompraProductos
 
             ' 4) POST
             Dim endpoint As String = BASE_URL.TrimEnd("/"c) & PATH_PURCHASE
-            LogBlock("=== PURCHASE URL ===", endpoint)
             Using req As New HttpRequestMessage(HttpMethod.Post, endpoint)
                 req.Headers.Accept.Clear()
                 req.Headers.Accept.ParseAdd("application/json")
@@ -125,14 +95,12 @@ Public Class CompraProductos
                     LastHttpStatus = CInt(resp.StatusCode)
                     LastResponseBody = body
 
-                    Dim reason As String = If(String.IsNullOrWhiteSpace(resp.ReasonPhrase), resp.StatusCode.ToString(), resp.ReasonPhrase)
-                    Dim statusLine As String = String.Format("Status: {0} {1}", LastHttpStatus.GetValueOrDefault(), reason)
-                    OUT(statusLine)
-                    LogBlock("=== PURCHASE RESPONSE ===", FormatJsonForLog(body))
+                    OUT("<<< [PURCHASE][HTTP] " & LastHttpStatus.GetValueOrDefault().ToString())
+                    OUT("<<< [PURCHASE][RESP]")
+                    OUT(LastResponseBody)
 
                     ' 5) Validación mínima por protocolo (ajusta a tu log/tabla)
                     Dim ok As Boolean = ValidarCompraEnBdPorProtocolo(protocol)
-                    OUT("[PURCHASE][VALIDATION] Resultado=" & If(ok, "OK", "SIN REGISTRO"))
                     r.Success = ok
                     r.ProtocolId = protocol
                     r.ContractId = contractId
