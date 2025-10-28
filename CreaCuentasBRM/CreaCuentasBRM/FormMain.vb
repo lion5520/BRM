@@ -3,7 +3,7 @@ Option Explicit On
 
 Imports System
 Imports System.Threading.Tasks
-Imports CreaCuentasBRM.Helpers
+Imports Helpers
 
 Public Class FormMain
 
@@ -77,9 +77,10 @@ Public Class FormMain
             Dim doPersist As Boolean = (CheckBox_Persistencia IsNot Nothing AndAlso CheckBox_Persistencia.Checked)
 
             Dim nCuentas As Integer = 1
-            If TextBox_NoCuentas Is Not Nothing AndAlso Not String.IsNullOrWhiteSpace(TextBox_NoCuentas.Text) Then
+            Dim cuentasTexto As String = TextBox_NoCuentas?.Text
+            If Not String.IsNullOrWhiteSpace(cuentasTexto) Then
                 Dim tmp As Integer
-                If Integer.TryParse(TextBox_NoCuentas.Text.Trim(), tmp) AndAlso tmp > 0 Then nCuentas = tmp
+                If Integer.TryParse(cuentasTexto.Trim(), tmp) AndAlso tmp > 0 Then nCuentas = tmp
             End If
 
             AppendDebug("[DATA] [FLOW] Inicio. Cuentas=" & nCuentas.ToString() & " Persistencia=" & doPersist.ToString())

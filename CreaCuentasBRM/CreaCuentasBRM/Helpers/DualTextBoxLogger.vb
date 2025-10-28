@@ -8,7 +8,7 @@ Imports System.Windows.Forms
 Imports Newtonsoft.Json
 Imports Newtonsoft.Json.Linq
 
-Namespace CreaCuentasBRM.Helpers
+Namespace Helpers
 
     ''' <summary>
     ''' Logger que distribuye mensajes entre dos TextBox (flujo y datos) manteniendo sincronización de UI
