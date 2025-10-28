@@ -31,6 +31,9 @@ Partial Class FormMain
         Me.ComboBox_ClienteTPO = New System.Windows.Forms.ComboBox()
         Me.CheckBox_Persistencia = New System.Windows.Forms.CheckBox()
         Me.ProcesaTodo = New System.Windows.Forms.Button()
+        Me.Label_TotalCreados = New System.Windows.Forms.Label()
+        Me.Label_total_errores = New System.Windows.Forms.Label()
+        Me.Button_limpiar = New System.Windows.Forms.Button()
         Me.TabPage3 = New System.Windows.Forms.TabPage()
         Me.tst_log_out = New System.Windows.Forms.TextBox()
         Me.TabPage4 = New System.Windows.Forms.TabPage()
@@ -65,6 +68,9 @@ Partial Class FormMain
         '
         'TabPage2
         '
+        Me.TabPage2.Controls.Add(Me.Button_limpiar)
+        Me.TabPage2.Controls.Add(Me.Label_total_errores)
+        Me.TabPage2.Controls.Add(Me.Label_TotalCreados)
         Me.TabPage2.Controls.Add(Me.TextBox_NoCuentas)
         Me.TabPage2.Controls.Add(Me.ComboBox_ProductoTPO)
         Me.TabPage2.Controls.Add(Me.ProgressBar_general)
@@ -96,9 +102,9 @@ Partial Class FormMain
         '
         'ProgressBar_general
         '
-        Me.ProgressBar_general.Location = New System.Drawing.Point(138, 356)
+        Me.ProgressBar_general.Location = New System.Drawing.Point(106, 271)
         Me.ProgressBar_general.Name = "ProgressBar_general"
-        Me.ProgressBar_general.Size = New System.Drawing.Size(100, 23)
+        Me.ProgressBar_general.Size = New System.Drawing.Size(306, 23)
         Me.ProgressBar_general.TabIndex = 3
         '
         'ComboBox_ClienteTPO
@@ -122,12 +128,39 @@ Partial Class FormMain
         '
         'ProcesaTodo
         '
-        Me.ProcesaTodo.Location = New System.Drawing.Point(559, 142)
+        Me.ProcesaTodo.Location = New System.Drawing.Point(450, 64)
         Me.ProcesaTodo.Name = "ProcesaTodo"
-        Me.ProcesaTodo.Size = New System.Drawing.Size(75, 23)
+        Me.ProcesaTodo.Size = New System.Drawing.Size(112, 32)
         Me.ProcesaTodo.TabIndex = 0
         Me.ProcesaTodo.Text = "Button1"
         Me.ProcesaTodo.UseVisualStyleBackColor = True
+        '
+        'Label_TotalCreados
+        '
+        Me.Label_TotalCreados.AutoSize = True
+        Me.Label_TotalCreados.Location = New System.Drawing.Point(103, 319)
+        Me.Label_TotalCreados.Name = "Label_TotalCreados"
+        Me.Label_TotalCreados.Size = New System.Drawing.Size(13, 13)
+        Me.Label_TotalCreados.TabIndex = 6
+        Me.Label_TotalCreados.Text = "0"
+        '
+        'Label_total_errores
+        '
+        Me.Label_total_errores.AutoSize = True
+        Me.Label_total_errores.Location = New System.Drawing.Point(103, 348)
+        Me.Label_total_errores.Name = "Label_total_errores"
+        Me.Label_total_errores.Size = New System.Drawing.Size(13, 13)
+        Me.Label_total_errores.TabIndex = 7
+        Me.Label_total_errores.Text = "0"
+        '
+        'Button_limpiar
+        '
+        Me.Button_limpiar.Location = New System.Drawing.Point(450, 111)
+        Me.Button_limpiar.Name = "Button_limpiar"
+        Me.Button_limpiar.Size = New System.Drawing.Size(112, 32)
+        Me.Button_limpiar.TabIndex = 8
+        Me.Button_limpiar.Text = "Limpiar"
+        Me.Button_limpiar.UseVisualStyleBackColor = True
         '
         'TabPage3
         '
@@ -198,5 +231,8 @@ Partial Class FormMain
     Friend WithEvents tst_log_out As TextBox
     Friend WithEvents TabPage4 As TabPage
     Friend WithEvents tst_log_debug As TextBox
+    Friend WithEvents Label_TotalCreados As Label
+    Friend WithEvents Label_total_errores As Label
+    Friend WithEvents Button_limpiar As Button
     Friend WithEvents TextBox_NoCuentas As TextBox
 End Class

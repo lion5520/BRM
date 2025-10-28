@@ -9,6 +9,7 @@ Imports System.Threading.Tasks
 Imports System.Data
 Imports Newtonsoft.Json
 Imports Newtonsoft.Json.Linq
+Imports System.Linq
 
 ' ===== Servicio =====
 Public Class CreaCliente
@@ -66,8 +67,7 @@ Public Class CreaCliente
             Dim json As String = payload.ToString(Formatting.None)
             LastRequestJson = json
             LogRequest(json)
-            OUT(">>> [CREATE][JSON]")
-            OUT(LastRequestJson)
+            OUT(">>> [CREATE][JSON] payload disponible en Log_Debug.")
 
             If Not persist Then
                 result.Success = True
@@ -91,14 +91,70 @@ Public Class CreaCliente
                     LastResponseBody = body
 
                     OUT("<<< [CREATE][HTTP] " & LastHttpStatus.GetValueOrDefault().ToString())
-                    OUT("<<< [CREATE][RESP]")
-                    OUT(LastResponseBody)
+                    OUT("<<< [CREATE][RESP] respuesta disponible en Log_Debug.")
+                    If _logger IsNot Nothing Then
+                        Try
+                            _logger.LogJson(body, "CREATE_RESPONSE")
+                        Catch
+                        End Try
+                    End If
 
                     ' 3) Validar en BD por CPF/CNPJ
                     Dim doc As String = payload.Value(Of String)("AC_FLD_CPF_CNPJ")
                     result.Documento = doc
                     result.ProtocolId = payload.Value(Of String)("AC_FLD_PROTOCOL_ID")
-                    Dim poid As String = ObtenerPoidPorDocumento(doc)
+                    Dim poid As String = String.Empty
+                    Const maxValidationAttempts As Integer = 5
+                    For attempt As Integer = 1 To maxValidationAttempts
+                        poid = ObtenerPoidPorDocumento(doc)
+                        If Not String.IsNullOrWhiteSpace(poid) Then
+                            Dim successMsg As String = String.Format("[CREATE][CHECK] intento {0}: confirmado account_poid.", attempt)
+                            OUT(successMsg)
+                            If _logger IsNot Nothing Then
+                                Try
+                                    _logger.LogData(New With {
+                                        .Operacion = "CrearCliente.ValidacionCuenta",
+                                        .Intento = attempt,
+                                        .AccountPoid = poid
+                                    }, "CREATE_CHECK")
+                                Catch
+                                End Try
+                            End If
+                            Exit For
+                        End If
+
+                        Dim pendingMsg As String = String.Format("[CREATE][CHECK] intento {0} sin confirmación. Esperando 2s...", attempt)
+                        OUT(pendingMsg)
+                        If _logger IsNot Nothing Then
+                            Try
+                                _logger.LogData(New With {
+                                    .Operacion = "CrearCliente.ValidacionCuenta",
+                                    .Intento = attempt,
+                                    .Estado = "Retry",
+                                    .Documento = doc
+                                }, "CREATE_CHECK")
+                            Catch
+                            End Try
+                        End If
+
+                        If attempt < maxValidationAttempts Then
+                            Await Task.Delay(TimeSpan.FromSeconds(2)).ConfigureAwait(False)
+                        End If
+                    Next
+
+                    If String.IsNullOrWhiteSpace(poid) Then
+                        OUT("[CREATE][ERROR] AccountPoid no confirmado tras múltiples intentos.")
+                        If _logger IsNot Nothing Then
+                            Try
+                                _logger.LogError("AccountPoid no disponible tras validación en base de datos.", Nothing, New With {
+                                    .Operacion = "CrearCliente.ValidacionCuenta",
+                                    .Intentos = maxValidationAttempts,
+                                    .Documento = doc
+                                })
+                            Catch
+                            End Try
+                        End If
+                    End If
 
                     result.AccountPoid = poid
                     result.HttpStatus = LastHttpStatus
@@ -110,6 +166,12 @@ Public Class CreaCliente
         Catch ex As Exception
             ErrorMessage = ex.Message
             OUT("[CREATE][ERROR] " & ErrorMessage)
+            If _logger IsNot Nothing Then
+                Try
+                    _logger.LogError(ErrorMessage, ex, New With {.Operacion = "CrearCliente"})
+                Catch
+                End Try
+            End If
             result.Success = False
             result.HttpStatus = LastHttpStatus
             result.RawBody = LastResponseBody
@@ -299,11 +361,12 @@ Public Class CreaCliente
     Private Function LoadSeeds() As System.Collections.Generic.List(Of SeedRow)
         Dim res As New System.Collections.Generic.List(Of SeedRow)
         Try
-            Dim path As String = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "seeds_clientes_br.csv")
-            If Not File.Exists(path) Then
+            Dim path As String = ResolveSeedsPath()
+            If String.IsNullOrWhiteSpace(path) OrElse Not File.Exists(path) Then
                 OUT("[SEEDS] no encontrado: " & path)
                 Return res
             End If
+            OUT("[SEEDS] usando: " & path)
             Using sr As New StreamReader(path, Encoding.UTF8)
                 Dim header As String = sr.ReadLine() ' salta cabecera
                 While Not sr.EndOfStream
@@ -350,6 +413,26 @@ Public Class CreaCliente
         Next
         vals.Add(sb.ToString())
         Return vals.ToArray()
+    End Function
+
+    Private Function ResolveSeedsPath() As String
+        Dim baseDir As String = AppDomain.CurrentDomain.BaseDirectory
+        Dim candidates As New System.Collections.Generic.List(Of String)
+        candidates.Add(System.IO.Path.Combine(baseDir, "seeds_clientes_br.csv"))
+
+        Dim current As String = baseDir
+        For i As Integer = 0 To 3
+            current = System.IO.Path.GetFullPath(System.IO.Path.Combine(current, ".."))
+            candidates.Add(System.IO.Path.Combine(current, "seeds_clientes_br.csv"))
+        Next
+
+        For Each candidate In candidates
+            If File.Exists(candidate) Then
+                Return candidate
+            End If
+        Next
+
+        Return candidates.FirstOrDefault()
     End Function
 
     Private Function SoloDigitos(s As String) As String
