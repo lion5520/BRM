@@ -1,4 +1,4 @@
-﻿Option Strict On
+Option Strict On
 Option Explicit On
 
 Imports System
@@ -8,6 +8,7 @@ Imports System.Threading.Tasks
 Imports System.Collections.Generic
 Imports System.Data
 Imports System.Linq
+Imports System.Xml.Linq
 Imports Newtonsoft.Json
 Imports Newtonsoft.Json.Linq
 
@@ -31,458 +32,467 @@ Public Class CompraProductos
     Private Shared ReadOnly _http As HttpClient = New HttpClient() With {.Timeout = TimeSpan.FromSeconds(30)}
     Private ReadOnly _db As BrmOracleQuery = New BrmOracleQuery()
 
-    Private Shared ReadOnly _creditCardTemplate As JObject = JObject.Parse(
-"{" &
-"\n    \"PIN_FLD_POID\":\"0.0.0.1 /account 505566556 0\"," &
-"\n    \"PIN_FLD_BILLINFO_OBJ\":\"0.0.0.1 /billinfo -1 0\"," &
-"\n    \"PIN_FLD_PAY_TYPE\":1," &
-"\n    \"AC_FLD_PROTOCOL_ID\": \"ORACLE_SAP_004\"," &
-"\n    \"AC_FLD_NSU_CIELO\": \"123456\"," &
-"\n    \"AC_FLD_REASON_CODE\":\"1\"," &
-"\n    \"AC_FLD_PURCHASE_SOURCE\" : \"Testes Oracle SAP\"," &
-"\n    \"AC_FLD_TRANSACTION_ID\" : \"1\"," &
-"\n    \"AC_FLD_AUTHORIZATION_NO\" : \"zEFkNK01J4SM96HNZEFKNKFEE0NV01ZY\"," &
-"\n    \"AC_FLD_PARCELA\": 1," &
-"\n    \"AC_FLD_CONTRACT_ID\": \"TP_ORACLE_SAP_004\"," &
-"\n    \"AC_FLD_STR_COD_TERMINAL\": \"\"," &
-"\n    \"PIN_FLD_PAYINFO\": [" &
-"\n        {" &
-"\n            \"PIN_FLD_POID\": \"0.0.0.1 /payinfo -1 0\"," &
-"\n            \"AC_FLD_CC_INFO\": {" &
-"\n                \"PIN_FLD_DEBIT_NUM\" : \"Hm90XC01JZ6D31KWHM90XCBBNT5ZMKV4\"," &
-"\n                \"AC_FLD_IS_HUB\" : \"True\"," &
-"\n                \"AC_FLD_CC_PROVIDER\" : \"12\"," &
-"\n                \"AC_FLD_DEBIT_MASKED_NUM\" : \"8883\"" &
-"\n            }" &
-"\n        }" &
-"\n    ]," &
-"\n   \"PIN_FLD_PRODUCTS\":[" &
-"\n       {" &
-"\n          \"PIN_FLD_PRODUCT_OBJ\":\"Banda Larga\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"8023h000007FvRAAA0\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Fibra 600 Mega\"," &
-"\n          \"CYCLE_FEE_AMT\":6057," &
-"\n          \"CYCLE_START_T\":\"0\"," &
-"\n          \"AC_FLD_COD_ANATEL\":\"SCM004\"," &
-"\n          \"AC_FLD_ID_OFERTA\":\"BL_600_OFFER\"," &
-"\n          \"AC_FLD_FLAG_VISIBILITY\":1," &
-"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"BL_600MB\"," &
-"\n          \"AC_FLD_VELOCITY\":\"600\"," &
-"\n          \"AC_FLD_FIDELIZACAO\" : \"Fidelização Anual\"" &
-"\n       }," &
-"\n       {" &
-"\n          \"PIN_FLD_PRODUCT_OBJ\":\"SVA\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"8023h000004Te39AAC\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Nio Expert Presencial\"," &
-"\n          \"CYCLE_FEE_AMT\":1490," &
-"\n          \"AC_FLD_COD_ANATEL\":\"Anatel_SVA\"," &
-"\n          \"AC_FLD_ID_OFERTA\":\"Fibra_SVA\"," &
-"\n          \"AC_ID_OFERTA\":\"1\"," &
-"\n          \"AC_FLD_FLAG_VISIBILITY\" : \"1\"," &
-"\n          \"AC_FLD_FLAG_EMBARCADO\":\"Embarcado\"," &
-"\n          \"AC_FLD_INCIDENCIA\":\"Banda Larga\"," &
-"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"EXP_CSA\"" &
-"\n       }," &
-"\n       {" &
-"\n          \"PIN_FLD_PRODUCT_OBJ\":\"SVA\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"8023h000007NgtrAAC\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Nio News Estadão\"," &
-"\n          \"CYCLE_FEE_AMT\":399," &
-"\n          \"AC_FLD_COD_ANATEL\":\"Anatel_SVA\"," &
-"\n          \"AC_FLD_ID_OFERTA\":\"Fibra_SVA\"," &
-"\n          \"AC_ID_OFERTA\":\"1\"," &
-"\n          \"AC_FLD_FLAG_VISIBILITY\" : \"1\"," &
-"\n          \"AC_FLD_FLAG_EMBARCADO\":\"Embarcado\"," &
-"\n          \"AC_FLD_INCIDENCIA\":\"Banda Larga\"," &
-"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"SVA_NEWS_ESTD\"" &
-"\n       }," &
-"\n       {" &
-"\n          \"PIN_FLD_PRODUCT_OBJ\":\"SVA\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"8023h000007InNPAA0\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Nio News Isto É\"," &
-"\n          \"CYCLE_FEE_AMT\":1070," &
-"\n          \"AC_FLD_COD_ANATEL\":\"Anatel_SVA\"," &
-"\n          \"AC_FLD_ID_OFERTA\":\"Fibra_SVA\"," &
-"\n          \"AC_ID_OFERTA\":\"1\"," &
-"\n          \"AC_FLD_FLAG_VISIBILITY\" : \"1\"," &
-"\n          \"AC_FLD_FLAG_EMBARCADO\":\"Embarcado\"," &
-"\n          \"AC_FLD_INCIDENCIA\":\"Banda Larga\"," &
-"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"SVA_NEWS_IE\"" &
-"\n       }," &
-"\n       {" &
-"\n          \"PIN_FLD_PRODUCT_OBJ\":\"SVA\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"8023h000007IdJIAA0\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Nio News O Dia\"," &
-"\n          \"CYCLE_FEE_AMT\":199," &
-"\n          \"AC_FLD_COD_ANATEL\":\"Anatel_SVA\"," &
-"\n          \"AC_FLD_ID_OFERTA\":\"Fibra_SVA\"," &
-"\n          \"AC_ID_OFERTA\":\"1\"," &
-"\n          \"AC_FLD_FLAG_VISIBILITY\" : \"1\"," &
-"\n          \"AC_FLD_FLAG_EMBARCADO\":\"Embarcado\"," &
-"\n          \"AC_FLD_INCIDENCIA\":\"Banda Larga\"," &
-"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"SVA_NEWS_ODIA\"" &
-"\n       }," &
-"\n       {" &
-"\n          \"PIN_FLD_PRODUCT_OBJ\":\"SVA\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"8023h000005Kk1CAAS\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Nio Notícias\"," &
-"\n          \"CYCLE_FEE_AMT\":560," &
-"\n          \"AC_FLD_COD_ANATEL\":\"Anatel_SVA\"," &
-"\n          \"AC_FLD_ID_OFERTA\":\"Fibra_SVA\"," &
-"\n          \"AC_ID_OFERTA\":\"1\"," &
-"\n          \"AC_FLD_FLAG_VISIBILITY\" : \"1\"," &
-"\n          \"AC_FLD_FLAG_EMBARCADO\":\"Embarcado\"," &
-"\n          \"AC_FLD_INCIDENCIA\":\"Banda Larga\"," &
-"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"OI_NTC\"" &
-"\n       }," &
-"\n       {" &
-"\n          \"PIN_FLD_PRODUCT_OBJ\":\"Oi Play\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"8023h000007B810AAC\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Nio Play Básico\"," &
-"\n          \"CYCLE_FEE_AMT\":0," &
-"\n          \"AC_FLD_COD_ANATEL\":\"Anatel_SVA\"," &
-"\n          \"AC_FLD_ID_OFERTA\":\"Fibra_SVA\"," &
-"\n          \"AC_ID_OFERTA\":\"1\"," &
-"\n          \"AC_FLD_FLAG_VISIBILITY\" : \"1\"," &
-"\n          \"AC_FLD_FLAG_EMBARCADO\":\"Embarcado\"," &
-"\n          \"AC_FLD_INCIDENCIA\":\"Banda Larga\"," &
-"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"OI_PLY_BSC\"" &
-"\n       }," &
-"\n   {" &
-"\n          \"PIN_FLD_PRODUCT_OBJ\":\"SVA\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"802U6000000kTX8IAM\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"1 Ponto Extra Wi-Fi 5\"," &
-"\n          \"CYCLE_FEE_AMT\":2646," &
-"\n          \"AC_FLD_COD_ANATEL\" : \"\"," &
-"\n          \"AC_FLD_FLAG_VISIBILITY\" : \"1\"," &
-"\n          \"AC_FLD_FLAG_EMBARCADO\":\"Avulso\"," &
-"\n          \"AC_FLD_INCIDENCIA\":\"Banda Larga\"," &
-"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"FIBRAX_MESH_1AP\"" &
-"\n       }," &
-"\n   {" &
-"\n          \"PIN_FLD_PRODUCT_OBJ\" : \"VoIP\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_ID\" : \"80288000006BmXOAA0\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Nio Fixo Fibra\"," &
-"\n          \"CYCLE_FEE_AMT\":2990," &
-"\n          \"AC_FLD_COD_ANATEL\" : \"STFC001_002_003\"," &
-"\n          \"AC_FLD_FLAG_VISIBILITY\" : \"1\"," &
-"\n          \"AC_FLD_FLAG_EMBARCADO\" : \"Avulso\"," &
-"\n          \"AC_FLD_CAT_PRODUCT_ID\" : \"VOIP_FIXOILIMITADO\"," &
-"\n          \"AC_FLD_STR_COD_TERMINAL\" : \"3144806269\"" &
-"\n       }," &
-"\n   {" &
-"\n          \"PIN_FLD_PRODUCT_OBJ\":\"SVOD\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"802U600000F9hy9IAB\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Paramount+\"," &
-"\n          \"CYCLE_FEE_AMT\":0," &
-"\n          \"AC_FLD_COD_ANATEL\":\"\"," &
-"\n          \"AC_FLD_ID_OFERTA\":\"BL_600_OFFER\"," &
-"\n          \"AC_ID_OFERTA\":\"1\"," &
-"\n          \"AC_FLD_FLAG_VISIBILITY\" : \"1\"," &
-"\n          \"AC_FLD_FLAG_EMBARCADO\":\"\"," &
-"\n          \"AC_FLD_INCIDENCIA\":\"Banda Larga\"," &
-"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"PRMNT_PLUS\"" &
-"\n       }" &
-"\n    ]" &
-"\n }")
+    Private Shared ReadOnly CreditCardTemplateJson As String =
+        <text>
+{
+    "PIN_FLD_POID":"0.0.0.1 /account 505566556 0",
+    "PIN_FLD_BILLINFO_OBJ":"0.0.0.1 /billinfo -1 0",
+    "PIN_FLD_PAY_TYPE":1,
+    "AC_FLD_PROTOCOL_ID": "ORACLE_SAP_004",
+    "AC_FLD_NSU_CIELO": "123456",
+    "AC_FLD_REASON_CODE":"1",
+    "AC_FLD_PURCHASE_SOURCE" : "Testes Oracle SAP",
+    "AC_FLD_TRANSACTION_ID" : "1",
+    "AC_FLD_AUTHORIZATION_NO" : "zEFkNK01J4SM96HNZEFKNKFEE0NV01ZY",
+    "AC_FLD_PARCELA": 1,
+    "AC_FLD_CONTRACT_ID": "TP_ORACLE_SAP_004",
+    "AC_FLD_STR_COD_TERMINAL": "",
+    "PIN_FLD_PAYINFO": [
+        {
+            "PIN_FLD_POID": "0.0.0.1 /payinfo -1 0",
+            "AC_FLD_CC_INFO": {
+                "PIN_FLD_DEBIT_NUM" : "Hm90XC01JZ6D31KWHM90XCBBNT5ZMKV4",
+                "AC_FLD_IS_HUB" : "True",
+                "AC_FLD_CC_PROVIDER" : "12",
+                "AC_FLD_DEBIT_MASKED_NUM" : "8883"
+            }
+        }
+    ],
+   "PIN_FLD_PRODUCTS":[
+       {
+          "PIN_FLD_PRODUCT_OBJ":"Banda Larga",
+          "AC_FLD_CRM_PRODUCT_ID":"8023h000007FvRAAA0",
+          "AC_FLD_CRM_PRODUCT_DESCR":"Fibra 600 Mega",
+          "CYCLE_FEE_AMT":6057,
+          "CYCLE_START_T":"0",
+          "AC_FLD_COD_ANATEL":"SCM004",
+          "AC_FLD_ID_OFERTA":"BL_600_OFFER",
+          "AC_FLD_FLAG_VISIBILITY":1,
+          "AC_FLD_CAT_PRODUCT_ID":"BL_600MB",
+          "AC_FLD_VELOCITY":"600",
+          "AC_FLD_FIDELIZACAO" : "Fidelização Anual"
+       },
+       {
+          "PIN_FLD_PRODUCT_OBJ":"SVA",
+          "AC_FLD_CRM_PRODUCT_ID":"8023h000004Te39AAC",
+          "AC_FLD_CRM_PRODUCT_DESCR":"Nio Expert Presencial",
+          "CYCLE_FEE_AMT":1490,
+          "AC_FLD_COD_ANATEL":"Anatel_SVA",
+          "AC_FLD_ID_OFERTA":"Fibra_SVA",
+          "AC_ID_OFERTA":"1",
+          "AC_FLD_FLAG_VISIBILITY" : "1",
+          "AC_FLD_FLAG_EMBARCADO":"Embarcado",
+          "AC_FLD_INCIDENCIA":"Banda Larga",
+          "AC_FLD_CAT_PRODUCT_ID":"EXP_CSA"
+       },
+       {
+          "PIN_FLD_PRODUCT_OBJ":"SVA",
+          "AC_FLD_CRM_PRODUCT_ID":"8023h000007NgtrAAC",
+          "AC_FLD_CRM_PRODUCT_DESCR":"Nio News Estadão",
+          "CYCLE_FEE_AMT":399,
+          "AC_FLD_COD_ANATEL":"Anatel_SVA",
+          "AC_FLD_ID_OFERTA":"Fibra_SVA",
+          "AC_ID_OFERTA":"1",
+          "AC_FLD_FLAG_VISIBILITY" : "1",
+          "AC_FLD_FLAG_EMBARCADO":"Embarcado",
+          "AC_FLD_INCIDENCIA":"Banda Larga",
+          "AC_FLD_CAT_PRODUCT_ID":"SVA_NEWS_ESTD"
+       },
+       {
+          "PIN_FLD_PRODUCT_OBJ":"SVA",
+          "AC_FLD_CRM_PRODUCT_ID":"8023h000007InNPAA0",
+          "AC_FLD_CRM_PRODUCT_DESCR":"Nio News Isto É",
+          "CYCLE_FEE_AMT":1070,
+          "AC_FLD_COD_ANATEL":"Anatel_SVA",
+          "AC_FLD_ID_OFERTA":"Fibra_SVA",
+          "AC_ID_OFERTA":"1",
+          "AC_FLD_FLAG_VISIBILITY" : "1",
+          "AC_FLD_FLAG_EMBARCADO":"Embarcado",
+          "AC_FLD_INCIDENCIA":"Banda Larga",
+          "AC_FLD_CAT_PRODUCT_ID":"SVA_NEWS_IE"
+       },   
+       {
+          "PIN_FLD_PRODUCT_OBJ":"SVA",
+          "AC_FLD_CRM_PRODUCT_ID":"8023h000007IdJIAA0",
+          "AC_FLD_CRM_PRODUCT_DESCR":"Nio News O Dia",
+          "CYCLE_FEE_AMT":199,
+          "AC_FLD_COD_ANATEL":"Anatel_SVA",
+          "AC_FLD_ID_OFERTA":"Fibra_SVA",
+          "AC_ID_OFERTA":"1",
+          "AC_FLD_FLAG_VISIBILITY" : "1",
+          "AC_FLD_FLAG_EMBARCADO":"Embarcado",
+          "AC_FLD_INCIDENCIA":"Banda Larga",
+          "AC_FLD_CAT_PRODUCT_ID":"SVA_NEWS_ODIA"
+       },   
+       {
+          "PIN_FLD_PRODUCT_OBJ":"SVA",
+          "AC_FLD_CRM_PRODUCT_ID":"8023h000005Kk1CAAS",
+          "AC_FLD_CRM_PRODUCT_DESCR":"Nio Notícias",
+          "CYCLE_FEE_AMT":560,
+          "AC_FLD_COD_ANATEL":"Anatel_SVA",
+          "AC_FLD_ID_OFERTA":"Fibra_SVA",
+          "AC_ID_OFERTA":"1",
+          "AC_FLD_FLAG_VISIBILITY" : "1",
+          "AC_FLD_FLAG_EMBARCADO":"Embarcado",
+          "AC_FLD_INCIDENCIA":"Banda Larga",
+          "AC_FLD_CAT_PRODUCT_ID":"OI_NTC"
+       },   
+       {
+          "PIN_FLD_PRODUCT_OBJ":"Oi Play",
+          "AC_FLD_CRM_PRODUCT_ID":"8023h000007B810AAC",
+          "AC_FLD_CRM_PRODUCT_DESCR":"Nio Play Básico",
+          "CYCLE_FEE_AMT":0,
+          "AC_FLD_COD_ANATEL":"Anatel_SVA",
+          "AC_FLD_ID_OFERTA":"Fibra_SVA",
+          "AC_ID_OFERTA":"1",
+          "AC_FLD_FLAG_VISIBILITY" : "1",
+          "AC_FLD_FLAG_EMBARCADO":"Embarcado",
+          "AC_FLD_INCIDENCIA":"Banda Larga",
+          "AC_FLD_CAT_PRODUCT_ID":"OI_PLY_BSC"
+       },
+   {
+          "PIN_FLD_PRODUCT_OBJ":"SVA",
+          "AC_FLD_CRM_PRODUCT_ID":"802U6000000kTX8IAM",
+          "AC_FLD_CRM_PRODUCT_DESCR":"1 Ponto Extra Wi-Fi 5",
+          "CYCLE_FEE_AMT":2646,
+          "AC_FLD_COD_ANATEL" : "",
+          "AC_FLD_FLAG_VISIBILITY" : "1",
+          "AC_FLD_FLAG_EMBARCADO":"Avulso",
+          "AC_FLD_INCIDENCIA":"Banda Larga",
+          "AC_FLD_CAT_PRODUCT_ID":"FIBRAX_MESH_1AP"
+       },
+   {
+          "PIN_FLD_PRODUCT_OBJ" : "VoIP",
+          "AC_FLD_CRM_PRODUCT_ID" : "80288000006BmXOAA0",
+          "AC_FLD_CRM_PRODUCT_DESCR":"Nio Fixo Fibra",
+          "CYCLE_FEE_AMT":2990,
+          "AC_FLD_COD_ANATEL" : "STFC001_002_003",
+          "AC_FLD_FLAG_VISIBILITY" : "1",
+          "AC_FLD_FLAG_EMBARCADO" : "Avulso",
+          "AC_FLD_CAT_PRODUCT_ID" : "VOIP_FIXOILIMITADO",
+          "AC_FLD_STR_COD_TERMINAL" : "3144806269"
+       },
+   {
+          "PIN_FLD_PRODUCT_OBJ":"SVOD",
+          "AC_FLD_CRM_PRODUCT_ID":"802U600000F9hy9IAB",
+          "AC_FLD_CRM_PRODUCT_DESCR":"Paramount+",
+          "CYCLE_FEE_AMT":0,
+          "AC_FLD_COD_ANATEL":"",
+          "AC_FLD_ID_OFERTA":"BL_600_OFFER",
+          "AC_ID_OFERTA":"1",
+          "AC_FLD_FLAG_VISIBILITY" : "1",
+          "AC_FLD_FLAG_EMBARCADO":"",
+          "AC_FLD_INCIDENCIA":"Banda Larga",
+          "AC_FLD_CAT_PRODUCT_ID":"PRMNT_PLUS"
+       }
+    ]
+ }
+        </text>.Value
 
-    Private Shared ReadOnly _boletoTemplate As JObject = JObject.Parse(
-"{" &
-"\n    \"PIN_FLD_POID\":\"0.0.0.1 /account 540919636 0\"," &
-"\n    \"PIN_FLD_BILLINFO_OBJ\":\"0.0.0.1 /billinfo -1 0\"," &
-"\n    \"PIN_FLD_PAY_TYPE\":2," &
-"\n    \"AC_FLD_PROTOCOL_ID\": \"ORACLE_SAP_001\"," &
-"\n    \"AC_FLD_NSU_CIELO\":\"12301\"," &
-"\n    \"AC_FLD_REASON_CODE\":\"1\"," &
-"\n    \"AC_FLD_PURCHASE_SOURCE\" : \"Testes Oracle SAP\"," &
-"\n    \"AC_FLD_TRANSACTION_ID\":\"1234501\"," &
-"\n    \"AC_FLD_AUTHORIZATION_NO\":\"1234501\"," &
-"\n    \"AC_FLD_PARCELA\":1," &
-"\n    \"AC_FLD_CONTRACT_ID\": \"TP_ORACLE_SAP_001\"," &
-"\n    \"AC_FLD_STR_COD_TERMINAL\": \"\"," &
-"\n    \"PIN_FLD_PAYINFO\":[" &
-"\n       {" &
-"\n          \"PIN_FLD_POID\":\"0.0.0.1 /payinfo -1 0\"," &
-"\n          \"AC_FLD_PAYINFO_BOLETO\":{" &
-"\n             \"AC_FLD_AGENT_ID\":\"0\"" &
-"\n          }" &
-"\n       }" &
-"\n    ]," &
-"\n    \"PIN_FLD_PRODUCTS\":[" &
-"\n       {" &
-"\n          \"PIN_FLD_PRODUCT_OBJ\":\"Banda Larga\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"8023h000007NwGvAAK\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Fibra 700 Mega\"," &
-"\n          \"CYCLE_FEE_AMT\":7172," &
-"\n          \"CYCLE_START_T\":\"0\"," &
-"\n          \"AC_FLD_COD_ANATEL\":\"SCM004\"," &
-"\n          \"AC_FLD_ID_OFERTA\":\"BL_700_OFFER\"," &
-"\n          \"AC_FLD_FLAG_VISIBILITY\":1," &
-"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"BL_700MB\"," &
-"\n          \"AC_FLD_VELOCITY\":\"700\"" &
-"\n       }," &
-"\n       {" &
-"\n          \"PIN_FLD_PRODUCT_OBJ\":\"SVA\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"802HZ000004apoJYAQ\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Nio Áudio Livros\"," &
-"\n          \"CYCLE_FEE_AMT\":600," &
-"\n          \"AC_FLD_COD_ANATEL\":\"Anatel_SVA\"," &
-"\n          \"AC_FLD_ID_OFERTA\":\"Fibra_SVA\"," &
-"\n          \"AC_ID_OFERTA\":\"1\"," &
-"\n          \"AC_FLD_FLAG_VISIBILITY\":1," &
-"\n          \"AC_FLD_FLAG_EMBARCADO\":\"Embarcado\"," &
-"\n          \"AC_FLD_INCIDENCIA\":\"Banda Larga\"," &
-"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"OI_AUD_LVR\"" &
-"\n       }," &
-"\n       {" &
-"\n          \"PIN_FLD_PRODUCT_OBJ\":\"SVA\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"802HZ000006Jh6HYAS\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Nio Livros\"," &
-"\n          \"CYCLE_FEE_AMT\":2060," &
-"\n          \"AC_FLD_COD_ANATEL\":\"Anatel_SVA\"," &
-"\n          \"AC_FLD_ID_OFERTA\":\"Fibra_SVA\"," &
-"\n          \"AC_ID_OFERTA\":\"1\"," &
-"\n          \"AC_FLD_FLAG_VISIBILITY\":1," &
-"\n          \"AC_FLD_FLAG_EMBARCADO\":\"Embarcado\"," &
-"\n          \"AC_FLD_INCIDENCIA\":\"Banda Larga\"," &
-"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"OI_LVR\"" &
-"\n       }," &
-"\n       {" &
-"\n          \"PIN_FLD_PRODUCT_OBJ\":\"SVA\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"8023h000004Te39AAC\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Nio Expert Presencial\"," &
-"\n          \"CYCLE_FEE_AMT\":1490," &
-"\n          \"AC_FLD_COD_ANATEL\":\"Anatel_SVA\"," &
-"\n          \"AC_FLD_ID_OFERTA\":\"Fibra_SVA\"," &
-"\n          \"AC_ID_OFERTA\":\"1\"," &
-"\n          \"AC_FLD_FLAG_VISIBILITY\":1," &
-"\n          \"AC_FLD_FLAG_EMBARCADO\":\"Embarcado\"," &
-"\n          \"AC_FLD_INCIDENCIA\":\"Banda Larga\"," &
-"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"EXP_CSA\"" &
-"\n       }," &
-"\n       {" &
-"\n          \"PIN_FLD_PRODUCT_OBJ\":\"SVA\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"8023h000007NgtrAAC\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Nio News Estadão\"," &
-"\n          \"CYCLE_FEE_AMT\":399," &
-"\n          \"AC_FLD_COD_ANATEL\":\"Anatel_SVA\"," &
-"\n          \"AC_FLD_ID_OFERTA\":\"Fibra_SVA\"," &
-"\n          \"AC_ID_OFERTA\":\"1\"," &
-"\n          \"AC_FLD_FLAG_VISIBILITY\":1," &
-"\n          \"AC_FLD_FLAG_EMBARCADO\":\"Embarcado\"," &
-"\n          \"AC_FLD_INCIDENCIA\":\"Banda Larga\"," &
-"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"SVA_NEWS_ESTD\"" &
-"\n       }," &
-"\n       {" &
-"\n          \"PIN_FLD_PRODUCT_OBJ\":\"SVA\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"8023h000007InNPAA0\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Nio News Isto É\"," &
-"\n          \"CYCLE_FEE_AMT\":1070," &
-"\n          \"AC_FLD_COD_ANATEL\":\"Anatel_SVA\"," &
-"\n          \"AC_FLD_ID_OFERTA\":\"Fibra_SVA\"," &
-"\n          \"AC_ID_OFERTA\":\"1\"," &
-"\n          \"AC_FLD_FLAG_VISIBILITY\":1," &
-"\n          \"AC_FLD_FLAG_EMBARCADO\":\"Embarcado\"," &
-"\n          \"AC_FLD_INCIDENCIA\":\"Banda Larga\"," &
-"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"SVA_NEWS_IE\"" &
-"\n       }," &
-"\n       {" &
-"\n          \"PIN_FLD_PRODUCT_OBJ\":\"SVA\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"8023h000007IdJIAA0\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Nio News O Dia\"," &
-"\n          \"CYCLE_FEE_AMT\":199," &
-"\n          \"AC_FLD_COD_ANATEL\":\"Anatel_SVA\"," &
-"\n          \"AC_FLD_ID_OFERTA\":\"Fibra_SVA\"," &
-"\n          \"AC_ID_OFERTA\":\"1\"," &
-"\n          \"AC_FLD_FLAG_VISIBILITY\":1," &
-"\n          \"AC_FLD_FLAG_EMBARCADO\":\"Embarcado\"," &
-"\n          \"AC_FLD_INCIDENCIA\":\"Banda Larga\"," &
-"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"SVA_NEWS_ODIA\"" &
-"\n       }," &
-"\n       {" &
-"\n          \"PIN_FLD_PRODUCT_OBJ\":\"SVA\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"8023h000005Kk1CAAS\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Nio Notícias\"," &
-"\n          \"CYCLE_FEE_AMT\":560," &
-"\n          \"AC_FLD_COD_ANATEL\":\"Anatel_SVA\"," &
-"\n          \"AC_FLD_ID_OFERTA\":\"Fibra_SVA\"," &
-"\n          \"AC_ID_OFERTA\":\"1\"," &
-"\n          \"AC_FLD_FLAG_VISIBILITY\":1," &
-"\n          \"AC_FLD_FLAG_EMBARCADO\":\"Embarcado\"," &
-"\n          \"AC_FLD_INCIDENCIA\":\"Banda Larga\"," &
-"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"\"" &
-"\n       }," &
-"\n       {" &
-"\n          \"PIN_FLD_PRODUCT_OBJ\":\"SVA\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"8023h000007B810AAC\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Nio Play Básico\"," &
-"\n          \"CYCLE_FEE_AMT\":0," &
-"\n          \"AC_FLD_COD_ANATEL\":\"Anatel_SVA\"," &
-"\n          \"AC_FLD_ID_OFERTA\":\"Fibra_SVA\"," &
-"\n          \"AC_ID_OFERTA\":\"1\"," &
-"\n          \"AC_FLD_FLAG_VISIBILITY\":1," &
-"\n          \"AC_FLD_FLAG_EMBARCADO\":\"Embarcado\"," &
-"\n          \"AC_FLD_INCIDENCIA\":\"Banda Larga\"," &
-"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"OI_PLY_BSC\"" &
-"\n       }" &
-"\n    ]" &
-"\n }")
+    Private Shared ReadOnly BoletoTemplateJson As String =
+        <text>
+{
+    "PIN_FLD_POID":"0.0.0.1 /account 540919636 0",
+    "PIN_FLD_BILLINFO_OBJ":"0.0.0.1 /billinfo -1 0",
+    "PIN_FLD_PAY_TYPE":2,
+    "AC_FLD_PROTOCOL_ID": "ORACLE_SAP_001",
+    "AC_FLD_NSU_CIELO":"12301",
+    "AC_FLD_REASON_CODE":"1",
+    "AC_FLD_PURCHASE_SOURCE" : "Testes Oracle SAP",
+    "AC_FLD_TRANSACTION_ID":"1234501",
+    "AC_FLD_AUTHORIZATION_NO":"1234501",
+    "AC_FLD_PARCELA":1,
+    "AC_FLD_CONTRACT_ID": "TP_ORACLE_SAP_001",
+    "AC_FLD_STR_COD_TERMINAL": "",
+    "PIN_FLD_PAYINFO":[
+       {
+          "PIN_FLD_POID":"0.0.0.1 /payinfo -1 0",
+          "AC_FLD_PAYINFO_BOLETO":{
+             "AC_FLD_AGENT_ID":"0"
+          }
+       }
+    ],
+    "PIN_FLD_PRODUCTS":[
+       {
+          "PIN_FLD_PRODUCT_OBJ":"Banda Larga",
+          "AC_FLD_CRM_PRODUCT_ID":"8023h000007NwGvAAK",
+          "AC_FLD_CRM_PRODUCT_DESCR":"Fibra 700 Mega",
+          "CYCLE_FEE_AMT":7172,
+          "CYCLE_START_T":"0",
+          "AC_FLD_COD_ANATEL":"SCM004",
+          "AC_FLD_ID_OFERTA":"BL_700_OFFER",
+          "AC_FLD_FLAG_VISIBILITY":1,
+          "AC_FLD_CAT_PRODUCT_ID":"BL_700MB",
+          "AC_FLD_VELOCITY":"700"
+       },
+       {
+          "PIN_FLD_PRODUCT_OBJ":"SVA",
+          "AC_FLD_CRM_PRODUCT_ID":"802HZ000004apoJYAQ",
+          "AC_FLD_CRM_PRODUCT_DESCR":"Nio Áudio Livros",
+          "CYCLE_FEE_AMT":600,
+          "AC_FLD_COD_ANATEL":"Anatel_SVA",
+          "AC_FLD_ID_OFERTA":"Fibra_SVA",
+          "AC_ID_OFERTA":"1",
+          "AC_FLD_FLAG_VISIBILITY":1,
+          "AC_FLD_FLAG_EMBARCADO":"Embarcado",
+          "AC_FLD_INCIDENCIA":"Banda Larga",
+          "AC_FLD_CAT_PRODUCT_ID":"OI_AUD_LVR"
+       },
+       {
+          "PIN_FLD_PRODUCT_OBJ":"SVA",
+          "AC_FLD_CRM_PRODUCT_ID":"802HZ000006Jh6HYAS",
+          "AC_FLD_CRM_PRODUCT_DESCR":"Nio Livros",
+          "CYCLE_FEE_AMT":2060,
+          "AC_FLD_COD_ANATEL":"Anatel_SVA",
+          "AC_FLD_ID_OFERTA":"Fibra_SVA",
+          "AC_ID_OFERTA":"1",
+          "AC_FLD_FLAG_VISIBILITY":1,
+          "AC_FLD_FLAG_EMBARCADO":"Embarcado",
+          "AC_FLD_INCIDENCIA":"Banda Larga",
+          "AC_FLD_CAT_PRODUCT_ID":"OI_LVR"
+       },
+       {
+          "PIN_FLD_PRODUCT_OBJ":"SVA",
+          "AC_FLD_CRM_PRODUCT_ID":"8023h000004Te39AAC",
+          "AC_FLD_CRM_PRODUCT_DESCR":"Nio Expert Presencial",
+          "CYCLE_FEE_AMT":1490,
+          "AC_FLD_COD_ANATEL":"Anatel_SVA",
+          "AC_FLD_ID_OFERTA":"Fibra_SVA",
+          "AC_ID_OFERTA":"1",
+          "AC_FLD_FLAG_VISIBILITY":1,
+          "AC_FLD_FLAG_EMBARCADO":"Embarcado",
+          "AC_FLD_INCIDENCIA":"Banda Larga",
+          "AC_FLD_CAT_PRODUCT_ID":"EXP_CSA"
+       },
+       {
+          "PIN_FLD_PRODUCT_OBJ":"SVA",
+          "AC_FLD_CRM_PRODUCT_ID":"8023h000007NgtrAAC",
+          "AC_FLD_CRM_PRODUCT_DESCR":"Nio News Estadão",
+          "CYCLE_FEE_AMT":399,
+          "AC_FLD_COD_ANATEL":"Anatel_SVA",
+          "AC_FLD_ID_OFERTA":"Fibra_SVA",
+          "AC_ID_OFERTA":"1",
+          "AC_FLD_FLAG_VISIBILITY":1,
+          "AC_FLD_FLAG_EMBARCADO":"Embarcado",
+          "AC_FLD_INCIDENCIA":"Banda Larga",
+          "AC_FLD_CAT_PRODUCT_ID":"SVA_NEWS_ESTD"
+       },
+       {
+          "PIN_FLD_PRODUCT_OBJ":"SVA",
+          "AC_FLD_CRM_PRODUCT_ID":"8023h000007InNPAA0",
+          "AC_FLD_CRM_PRODUCT_DESCR":"Nio News Isto É",
+          "CYCLE_FEE_AMT":1070,
+          "AC_FLD_COD_ANATEL":"Anatel_SVA",
+          "AC_FLD_ID_OFERTA":"Fibra_SVA",
+          "AC_ID_OFERTA":"1",
+          "AC_FLD_FLAG_VISIBILITY":1,
+          "AC_FLD_FLAG_EMBARCADO":"Embarcado",
+          "AC_FLD_INCIDENCIA":"Banda Larga",
+          "AC_FLD_CAT_PRODUCT_ID":"SVA_NEWS_IE"
+       },   
+       {
+          "PIN_FLD_PRODUCT_OBJ":"SVA",
+          "AC_FLD_CRM_PRODUCT_ID":"8023h000007IdJIAA0",
+          "AC_FLD_CRM_PRODUCT_DESCR":"Nio News O Dia",
+          "CYCLE_FEE_AMT":199,
+          "AC_FLD_COD_ANATEL":"Anatel_SVA",
+          "AC_FLD_ID_OFERTA":"Fibra_SVA",
+          "AC_ID_OFERTA":"1",
+          "AC_FLD_FLAG_VISIBILITY":1,
+          "AC_FLD_FLAG_EMBARCADO":"Embarcado",
+          "AC_FLD_INCIDENCIA":"Banda Larga",
+          "AC_FLD_CAT_PRODUCT_ID":"SVA_NEWS_ODIA"
+       },   
+       {
+          "PIN_FLD_PRODUCT_OBJ":"SVA",
+          "AC_FLD_CRM_PRODUCT_ID":"8023h000005Kk1CAAS",
+          "AC_FLD_CRM_PRODUCT_DESCR":"Nio Notícias",
+          "CYCLE_FEE_AMT":560,
+          "AC_FLD_COD_ANATEL":"Anatel_SVA",
+          "AC_FLD_ID_OFERTA":"Fibra_SVA",
+          "AC_ID_OFERTA":"1",
+          "AC_FLD_FLAG_VISIBILITY":1,
+          "AC_FLD_FLAG_EMBARCADO":"Embarcado",
+          "AC_FLD_INCIDENCIA":"Banda Larga",
+          "AC_FLD_CAT_PRODUCT_ID":""
+       },   
+       {
+          "PIN_FLD_PRODUCT_OBJ":"SVA",
+          "AC_FLD_CRM_PRODUCT_ID":"8023h000007B810AAC",
+          "AC_FLD_CRM_PRODUCT_DESCR":"Nio Play Básico",
+          "CYCLE_FEE_AMT":0,
+          "AC_FLD_COD_ANATEL":"Anatel_SVA",
+          "AC_FLD_ID_OFERTA":"Fibra_SVA",
+          "AC_ID_OFERTA":"1",
+          "AC_FLD_FLAG_VISIBILITY":1,
+          "AC_FLD_FLAG_EMBARCADO":"Embarcado",
+          "AC_FLD_INCIDENCIA":"Banda Larga",
+          "AC_FLD_CAT_PRODUCT_ID":"OI_PLY_BSC"
+       }
+    ]
+ }
+        </text>.Value
 
-    Private Shared ReadOnly _dacTemplate As JObject = JObject.Parse(
-"{" &
-"\n   \"PIN_FLD_POID\":\"0.0.0.1 /account 540926405 0\"," &
-"\n   \"PIN_FLD_BILLINFO_OBJ\":\"0.0.0.1 /billinfo -1 0\"," &
-"\n   \"PIN_FLD_PAY_TYPE\": 3," &
-"\n    \"AC_FLD_PROTOCOL_ID\": \"ORACLE_SAP_006\"," &
-"\n   \"AC_FLD_NSU_CIELO\":\"123\"," &
-"\n   \"AC_FLD_REASON_CODE\":\"1\"," &
-"\n   \"AC_FLD_PURCHASE_SOURCE\" : \"Testes Oracle SAP\"," &
-"\n   \"AC_FLD_TRANSACTION_ID\":\"618648749606489351\"," &
-"\n   \"AC_FLD_AUTHORIZATION_NO\":\"12345\"," &
-"\n   \"AC_FLD_PARCELA\":1," &
-"\n    \"AC_FLD_CONTRACT_ID\": \"TP_ORACLE_SAP_006\"," &
-"\n   \"AC_FLD_REUSO_FLAG\":0," &
-"\n    \"AC_FLD_STR_COD_TERMINAL\": \"\"," &
-"\n   \"PIN_FLD_PAYINFO\":[" &
-"\n   {" &
-"\n       \"PIN_FLD_POID\": \"0.0.0.1 /payinfo -1 0\"," &
-"\n       \"AC_FLD_DACC_INFO\": " &
-"\n       {" &
-"\n           \"AC_FLD_BANK_NO\": \"341\"," &
-"\n           \"AC_FLD_AGENCIA_DACC\": \"7077\"," &
-"\n           \"PIN_FLD_CONTA_DEBITO\": \"067869-9\"" &
-"\n        }" &
-"\n    }   ]," &
-"\n    \"PIN_FLD_PRODUCTS\":[" &
-"\n       {" &
-"\n          \"PIN_FLD_PRODUCT_OBJ\":\"Banda Larga\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"80288000003iJWiAAM\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Fibra 1 Giga\"," &
-"\n          \"CYCLE_FEE_AMT\":45520," &
-"\n          \"CYCLE_START_T\":\"0\"," &
-"\n          \"AC_FLD_COD_ANATEL\":\"SCM004\"," &
-"\n          \"AC_FLD_ID_OFERTA\":\"BL_1000_OFFER\"," &
-"\n          \"AC_FLD_FLAG_VISIBILITY\":1," &
-"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"BL_1000MB\"," &
-"\n          \"AC_FLD_VELOCITY\":\"1000\"," &
-"\n          \"AC_FLD_FIDELIZACAO\" : \"Fidelização Anual\"" &
-"\n       }," &
-"\n       {" &
-"\n          \"PIN_FLD_PRODUCT_OBJ\":\"SVA\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"8023h000004Te39AAC\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Nio Expert Presencial\"," &
-"\n          \"CYCLE_FEE_AMT\":1490," &
-"\n          \"AC_FLD_COD_ANATEL\":\"Anatel_SVA\"," &
-"\n          \"AC_FLD_ID_OFERTA\":\"Fibra_SVA\"," &
-"\n          \"AC_ID_OFERTA\":\"1\"," &
-"\n          \"AC_FLD_FLAG_VISIBILITY\" : \"1\"," &
-"\n          \"AC_FLD_FLAG_EMBARCADO\":\"Embarcado\"," &
-"\n          \"AC_FLD_INCIDENCIA\":\"Banda Larga\"," &
-"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"EXP_CSA\"" &
-"\n       }," &
-"\n       {" &
-"\n          \"PIN_FLD_PRODUCT_OBJ\":\"SVA\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"8023h000007NgtrAAC\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Nio News Estadão\"," &
-"\n          \"CYCLE_FEE_AMT\":399," &
-"\n          \"AC_FLD_COD_ANATEL\":\"Anatel_SVA\"," &
-"\n          \"AC_FLD_ID_OFERTA\":\"Fibra_SVA\"," &
-"\n          \"AC_ID_OFERTA\":\"1\"," &
-"\n          \"AC_FLD_FLAG_VISIBILITY\" : \"1\"," &
-"\n          \"AC_FLD_FLAG_EMBARCADO\":\"Embarcado\"," &
-"\n          \"AC_FLD_INCIDENCIA\":\"Banda Larga\"," &
-"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"SVA_NEWS_ESTD\"" &
-"\n       }," &
-"\n       {" &
-"\n          \"PIN_FLD_PRODUCT_OBJ\":\"SVA\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"8023h000007InNPAA0\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Nio News Isto É\"," &
-"\n          \"CYCLE_FEE_AMT\":1070," &
-"\n          \"AC_FLD_COD_ANATEL\":\"Anatel_SVA\"," &
-"\n          \"AC_FLD_ID_OFERTA\":\"Fibra_SVA\"," &
-"\n          \"AC_ID_OFERTA\":\"1\"," &
-"\n          \"AC_FLD_FLAG_VISIBILITY\" : \"1\"," &
-"\n          \"AC_FLD_FLAG_EMBARCADO\":\"Embarcado\"," &
-"\n          \"AC_FLD_INCIDENCIA\":\"Banda Larga\"," &
-"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"SVA_NEWS_IE\"" &
-"\n       }," &
-"\n       {" &
-"\n          \"PIN_FLD_PRODUCT_OBJ\":\"SVA\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"8023h000007IdJIAA0\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Nio News O Dia\"," &
-"\n          \"CYCLE_FEE_AMT\":199," &
-"\n          \"AC_FLD_COD_ANATEL\":\"Anatel_SVA\"," &
-"\n          \"AC_FLD_ID_OFERTA\":\"Fibra_SVA\"," &
-"\n          \"AC_ID_OFERTA\":\"1\"," &
-"\n          \"AC_FLD_FLAG_VISIBILITY\" : \"1\"," &
-"\n          \"AC_FLD_FLAG_EMBARCADO\":\"Embarcado\"," &
-"\n          \"AC_FLD_INCIDENCIA\":\"Banda Larga\"," &
-"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"SVA_NEWS_ODIA\"" &
-"\n       }," &
-"\n       {" &
-"\n          \"PIN_FLD_PRODUCT_OBJ\":\"SVA\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"8023h000005Kk1CAAS\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Nio Notícias\"," &
-"\n          \"CYCLE_FEE_AMT\":560," &
-"\n          \"AC_FLD_COD_ANATEL\":\"Anatel_SVA\"," &
-"\n          \"AC_FLD_ID_OFERTA\":\"Fibra_SVA\"," &
-"\n          \"AC_ID_OFERTA\":\"1\"," &
-"\n          \"AC_FLD_FLAG_VISIBILITY\" : \"1\"," &
-"\n          \"AC_FLD_FLAG_EMBARCADO\":\"Embarcado\"," &
-"\n          \"AC_FLD_INCIDENCIA\":\"Banda Larga\"," &
-"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"OI_NTC\"" &
-"\n       }," &
-"\n       {" &
-"\n          \"PIN_FLD_PRODUCT_OBJ\":\"Oi Play\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"8023h000007B810AAC\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Nio Play Básico\"," &
-"\n          \"CYCLE_FEE_AMT\":0," &
-"\n          \"AC_FLD_COD_ANATEL\":\"Anatel_SVA\"," &
-"\n          \"AC_FLD_ID_OFERTA\":\"Fibra_SVA\"," &
-"\n          \"AC_ID_OFERTA\":\"1\"," &
-"\n          \"AC_FLD_FLAG_VISIBILITY\" : \"1\"," &
-"\n          \"AC_FLD_FLAG_EMBARCADO\":\"Embarcado\"," &
-"\n          \"AC_FLD_INCIDENCIA\":\"Banda Larga\"," &
-"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"OI_PLY_BSC\"" &
-"\n       }," &
-"\n       {" &
-"\n          \"PIN_FLD_PRODUCT_OBJ\":\"SVA\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"802U6000000YuhbIAC\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"1 Ponto Extra Wi-Fi 6 FTTR\"," &
-"\n          \"CYCLE_FEE_AMT\":2500," &
-"\n          \"AC_FLD_COD_ANATEL\" : \"\"," &
-"\n          \"AC_FLD_FLAG_VISIBILITY\" : \"1\"," &
-"\n          \"AC_FLD_FLAG_EMBARCADO\":\"Embarcado\"," &
-"\n          \"AC_FLD_INCIDENCIA\":\"Banda Larga\"," &
-"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"FIBRAX_FTTR_1AP\"" &
-"\n       }," &
-"\n       {" &
-"\n          \"PIN_FLD_PRODUCT_OBJ\":\"SVOD\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_ID\":\"802U6000008PsYPIA0\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Max\"," &
-"\n          \"CYCLE_FEE_AMT\":0," &
-"\n          \"AC_FLD_COD_ANATEL\":\"\"," &
-"\n          \"AC_FLD_ID_OFERTA\":\"BL_1000_OFFER\"," &
-"\n          \"AC_ID_OFERTA\":\"1\"," &
-"\n          \"AC_FLD_FLAG_VISIBILITY\" : \"1\"," &
-"\n          \"AC_FLD_FLAG_EMBARCADO\":\"\"," &
-"\n          \"AC_FLD_INCIDENCIA\":\"Banda Larga\"," &
-"\n          \"AC_FLD_CAT_PRODUCT_ID\":\"HBO_MAX\"" &
-"\n       }," &
-"\n   {" &
-"\n          \"PIN_FLD_PRODUCT_OBJ\" : \"VoIP\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_ID\" : \"80288000006BmXOAA0\"," &
-"\n          \"AC_FLD_CRM_PRODUCT_DESCR\":\"Nio Fixo Fibra\"," &
-"\n          \"CYCLE_FEE_AMT\":2990," &
-"\n          \"AC_FLD_COD_ANATEL\" : \"STFC001_002_003\"," &
-"\n          \"AC_FLD_FLAG_VISIBILITY\" : \"1\"," &
-"\n          \"AC_FLD_FLAG_EMBARCADO\" : \"Avulso\"," &
-"\n          \"AC_FLD_CAT_PRODUCT_ID\" : \"VOIP_FIXOILIMITADO\"," &
-"\n          \"AC_FLD_STR_COD_TERMINAL\" : \"3164611919\"" &
-"\n       }" &
-"\n    ]" &
-"\n }")
+    Private Shared ReadOnly DacTemplateJson As String =
+        <text>
+{
+   "PIN_FLD_POID":"0.0.0.1 /account 540926405 0",
+   "PIN_FLD_BILLINFO_OBJ":"0.0.0.1 /billinfo -1 0",
+   "PIN_FLD_PAY_TYPE": 3,
+    "AC_FLD_PROTOCOL_ID": "ORACLE_SAP_006",
+   "AC_FLD_NSU_CIELO":"123",
+   "AC_FLD_REASON_CODE":"1",
+   "AC_FLD_PURCHASE_SOURCE" : "Testes Oracle SAP",
+   "AC_FLD_TRANSACTION_ID":"618648749606489351",
+   "AC_FLD_AUTHORIZATION_NO":"12345",
+   "AC_FLD_PARCELA":1,
+    "AC_FLD_CONTRACT_ID": "TP_ORACLE_SAP_006",
+   "AC_FLD_REUSO_FLAG":0,
+    "AC_FLD_STR_COD_TERMINAL": "",
+   "PIN_FLD_PAYINFO":[
+   {
+       "PIN_FLD_POID": "0.0.0.1 /payinfo -1 0",
+       "AC_FLD_DACC_INFO": 
+       {
+           "AC_FLD_BANK_NO": "341",
+           "AC_FLD_AGENCIA_DACC": "7077",
+           "PIN_FLD_CONTA_DEBITO": "067869-9"
+        }
+    }   ],
+    "PIN_FLD_PRODUCTS":[
+       {
+          "PIN_FLD_PRODUCT_OBJ":"Banda Larga",
+          "AC_FLD_CRM_PRODUCT_ID":"80288000003iJWiAAM",
+          "AC_FLD_CRM_PRODUCT_DESCR":"Fibra 1 Giga",
+          "CYCLE_FEE_AMT":45520,
+          "CYCLE_START_T":"0",
+          "AC_FLD_COD_ANATEL":"SCM004",
+          "AC_FLD_ID_OFERTA":"BL_1000_OFFER",
+          "AC_FLD_FLAG_VISIBILITY":1,
+          "AC_FLD_CAT_PRODUCT_ID":"BL_1000MB",
+          "AC_FLD_VELOCITY":"1000",
+          "AC_FLD_FIDELIZACAO" : "Fidelização Anual"
+       },
+       {
+          "PIN_FLD_PRODUCT_OBJ":"SVA",
+          "AC_FLD_CRM_PRODUCT_ID":"8023h000004Te39AAC",
+          "AC_FLD_CRM_PRODUCT_DESCR":"Nio Expert Presencial",
+          "CYCLE_FEE_AMT":1490,
+          "AC_FLD_COD_ANATEL":"Anatel_SVA",
+          "AC_FLD_ID_OFERTA":"Fibra_SVA",
+          "AC_ID_OFERTA":"1",
+          "AC_FLD_FLAG_VISIBILITY" : "1",
+          "AC_FLD_FLAG_EMBARCADO":"Embarcado",
+          "AC_FLD_INCIDENCIA":"Banda Larga",
+          "AC_FLD_CAT_PRODUCT_ID":"EXP_CSA"
+       },
+       {
+          "PIN_FLD_PRODUCT_OBJ":"SVA",
+          "AC_FLD_CRM_PRODUCT_ID":"8023h000007NgtrAAC",
+          "AC_FLD_CRM_PRODUCT_DESCR":"Nio News Estadão",
+          "CYCLE_FEE_AMT":399,
+          "AC_FLD_COD_ANATEL":"Anatel_SVA",
+          "AC_FLD_ID_OFERTA":"Fibra_SVA",
+          "AC_ID_OFERTA":"1",
+          "AC_FLD_FLAG_VISIBILITY" : "1",
+          "AC_FLD_FLAG_EMBARCADO":"Embarcado",
+          "AC_FLD_INCIDENCIA":"Banda Larga",
+          "AC_FLD_CAT_PRODUCT_ID":"SVA_NEWS_ESTD"
+       },
+       {
+          "PIN_FLD_PRODUCT_OBJ":"SVA",
+          "AC_FLD_CRM_PRODUCT_ID":"8023h000007InNPAA0",
+          "AC_FLD_CRM_PRODUCT_DESCR":"Nio News Isto É",
+          "CYCLE_FEE_AMT":1070,
+          "AC_FLD_COD_ANATEL":"Anatel_SVA",
+          "AC_FLD_ID_OFERTA":"Fibra_SVA",
+          "AC_ID_OFERTA":"1",
+          "AC_FLD_FLAG_VISIBILITY" : "1",
+          "AC_FLD_FLAG_EMBARCADO":"Embarcado",
+          "AC_FLD_INCIDENCIA":"Banda Larga",
+          "AC_FLD_CAT_PRODUCT_ID":"SVA_NEWS_IE"
+       },   
+       {
+          "PIN_FLD_PRODUCT_OBJ":"SVA",
+          "AC_FLD_CRM_PRODUCT_ID":"8023h000007IdJIAA0",
+          "AC_FLD_CRM_PRODUCT_DESCR":"Nio News O Dia",
+          "CYCLE_FEE_AMT":199,
+          "AC_FLD_COD_ANATEL":"Anatel_SVA",
+          "AC_FLD_ID_OFERTA":"Fibra_SVA",
+          "AC_ID_OFERTA":"1",
+          "AC_FLD_FLAG_VISIBILITY" : "1",
+          "AC_FLD_FLAG_EMBARCADO":"Embarcado",
+          "AC_FLD_INCIDENCIA":"Banda Larga",
+          "AC_FLD_CAT_PRODUCT_ID":"SVA_NEWS_ODIA"
+       },   
+       {
+          "PIN_FLD_PRODUCT_OBJ":"SVA",
+          "AC_FLD_CRM_PRODUCT_ID":"8023h000005Kk1CAAS",
+          "AC_FLD_CRM_PRODUCT_DESCR":"Nio Notícias",
+          "CYCLE_FEE_AMT":560,
+          "AC_FLD_COD_ANATEL":"Anatel_SVA",
+          "AC_FLD_ID_OFERTA":"Fibra_SVA",
+          "AC_ID_OFERTA":"1",
+          "AC_FLD_FLAG_VISIBILITY" : "1",
+          "AC_FLD_FLAG_EMBARCADO":"Embarcado",
+          "AC_FLD_INCIDENCIA":"Banda Larga",
+          "AC_FLD_CAT_PRODUCT_ID":"OI_NTC"
+       },   
+       {
+          "PIN_FLD_PRODUCT_OBJ":"Oi Play",
+          "AC_FLD_CRM_PRODUCT_ID":"8023h000007B810AAC",
+          "AC_FLD_CRM_PRODUCT_DESCR":"Nio Play Básico",
+          "CYCLE_FEE_AMT":0,
+          "AC_FLD_COD_ANATEL":"Anatel_SVA",
+          "AC_FLD_ID_OFERTA":"Fibra_SVA",
+          "AC_ID_OFERTA":"1",
+          "AC_FLD_FLAG_VISIBILITY" : "1",
+          "AC_FLD_FLAG_EMBARCADO":"Embarcado",
+          "AC_FLD_INCIDENCIA":"Banda Larga",
+          "AC_FLD_CAT_PRODUCT_ID":"OI_PLY_BSC"
+       },
+   {
+          "PIN_FLD_PRODUCT_OBJ":"SVA",
+          "AC_FLD_CRM_PRODUCT_ID":"802U6000000YuhbIAC",
+          "AC_FLD_CRM_PRODUCT_DESCR":"1 Ponto Extra Wi-Fi 6 FTTR",
+          "CYCLE_FEE_AMT":2500,
+          "AC_FLD_COD_ANATEL" : "",
+          "AC_FLD_FLAG_VISIBILITY" : "1",
+          "AC_FLD_FLAG_EMBARCADO":"Embarcado",
+          "AC_FLD_INCIDENCIA":"Banda Larga",
+          "AC_FLD_CAT_PRODUCT_ID":"FIBRAX_FTTR_1AP"
+       },
+       {
+          "PIN_FLD_PRODUCT_OBJ":"SVOD",
+          "AC_FLD_CRM_PRODUCT_ID":"802U6000008PsYPIA0",
+          "AC_FLD_CRM_PRODUCT_DESCR":"Max",
+          "CYCLE_FEE_AMT":0,
+          "AC_FLD_COD_ANATEL":"",
+          "AC_FLD_ID_OFERTA":"BL_1000_OFFER",
+          "AC_ID_OFERTA":"1",
+          "AC_FLD_FLAG_VISIBILITY" : "1",
+          "AC_FLD_FLAG_EMBARCADO":"",
+          "AC_FLD_INCIDENCIA":"Banda Larga",
+          "AC_FLD_CAT_PRODUCT_ID":"HBO_MAX"
+       },
+   {
+          "PIN_FLD_PRODUCT_OBJ" : "VoIP",
+          "AC_FLD_CRM_PRODUCT_ID" : "80288000006BmXOAA0",
+          "AC_FLD_CRM_PRODUCT_DESCR":"Nio Fixo Fibra",
+          "CYCLE_FEE_AMT":2990,
+          "AC_FLD_COD_ANATEL" : "STFC001_002_003",
+          "AC_FLD_FLAG_VISIBILITY" : "1",
+          "AC_FLD_FLAG_EMBARCADO" : "Avulso",
+          "AC_FLD_CAT_PRODUCT_ID" : "VOIP_FIXOILIMITADO",
+          "AC_FLD_STR_COD_TERMINAL" : "3164611919"
+       }
+    ]
+ }
+        </text>.Value
 
+    Private Shared ReadOnly _creditCardTemplate As JObject = JObject.Parse(CreditCardTemplateJson)
+    Private Shared ReadOnly _boletoTemplate As JObject = JObject.Parse(BoletoTemplateJson)
+    Private Shared ReadOnly _dacTemplate As JObject = JObject.Parse(DacTemplateJson)
     Private Shared Function GetTemplate(tipo As PayType) As JObject
         Select Case tipo
             Case PayType.CreditCard
