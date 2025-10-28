@@ -9,7 +9,7 @@ Public Class FormMain
     Private ReadOnly _creador As New CreaCliente()
     Private ReadOnly _comprador As New CompraProductos()
     Private ReadOnly _bole As New BolecodeResponse()
-    Private _debugLogger As Global.UiTextBoxLogger
+    Private _debugLogger As UiTextBoxLogger
 
     Private Sub FormMain_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         ' Engancha canal OUT
@@ -18,7 +18,7 @@ Public Class FormMain
         _bole.OnOut = AddressOf OutSink
 
         If tst_log_debug IsNot Nothing AndAlso _debugLogger Is Nothing Then
-            _debugLogger = New Global.UiTextBoxLogger(Me, tst_log_debug)
+            _debugLogger = New UiTextBoxLogger(Me, tst_log_debug)
             _creador.Logger = _debugLogger
             _comprador.Logger = _debugLogger
             _bole.Logger = _debugLogger
