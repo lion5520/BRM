@@ -3,7 +3,7 @@ Option Explicit On
 
 Imports System
 Imports System.Threading.Tasks
-Imports Helpers
+Imports CreaCuentasBRM.Helpers
 
 Public Class FormMain
 
