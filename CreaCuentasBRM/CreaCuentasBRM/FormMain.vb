@@ -46,6 +46,16 @@ Public Class FormMain
     End Sub
 
     Private Async Sub ProcesaTodo_Click(sender As Object, e As EventArgs) Handles ProcesaTodo.Click
+        Dim previousCursor As Cursor = Cursor.Current
+        Dim previousUseWait As Boolean = Me.UseWaitCursor
+
+        If TabControl1 IsNot Nothing AndAlso TabPage4 IsNot Nothing Then
+            TabControl1.SelectedTab = TabPage4
+        End If
+
+        Me.UseWaitCursor = True
+        Cursor.Current = Cursors.WaitCursor
+
         Try
             Dim doPersist As Boolean = (CheckBox_Persistencia IsNot Nothing AndAlso CheckBox_Persistencia.Checked)
 
@@ -124,6 +134,9 @@ Public Class FormMain
             AppendDebug("[DATA] [DONE] Proceso completado.")
         Catch ex As Exception
             AppendDebug("[ERROR] " & ex.Message)
+        Finally
+            Me.UseWaitCursor = previousUseWait
+            Cursor.Current = previousCursor
         End Try
     End Sub
 
