@@ -42,6 +42,8 @@ Partial Class FormMain
         Me.TabPage4 = New System.Windows.Forms.TabPage()
         Me.tst_log_out = New System.Windows.Forms.TextBox()
         Me.tst_log_debug = New System.Windows.Forms.TextBox()
+        Me.Label6 = New System.Windows.Forms.Label()
+        Me.ComboBox_UF = New System.Windows.Forms.ComboBox()
         Me.TabControl1.SuspendLayout()
         Me.TabPage2.SuspendLayout()
         CType(Me.TextBox_NoCuentas, System.ComponentModel.ISupportInitialize).BeginInit()
@@ -71,6 +73,8 @@ Partial Class FormMain
         '
         'TabPage2
         '
+        Me.TabPage2.Controls.Add(Me.ComboBox_UF)
+        Me.TabPage2.Controls.Add(Me.Label6)
         Me.TabPage2.Controls.Add(Me.Label5)
         Me.TabPage2.Controls.Add(Me.Label4)
         Me.TabPage2.Controls.Add(Me.Label3)
@@ -114,7 +118,7 @@ Partial Class FormMain
         'Label3
         '
         Me.Label3.AutoSize = True
-        Me.Label3.Location = New System.Drawing.Point(212, 25)
+        Me.Label3.Location = New System.Drawing.Point(181, 222)
         Me.Label3.Name = "Label3"
         Me.Label3.Size = New System.Drawing.Size(104, 13)
         Me.Label3.TabIndex = 12
@@ -122,7 +126,7 @@ Partial Class FormMain
         '
         'TextBox_NoCuentas
         '
-        Me.TextBox_NoCuentas.Location = New System.Drawing.Point(215, 43)
+        Me.TextBox_NoCuentas.Location = New System.Drawing.Point(184, 240)
         Me.TextBox_NoCuentas.Name = "TextBox_NoCuentas"
         Me.TextBox_NoCuentas.Size = New System.Drawing.Size(120, 20)
         Me.TextBox_NoCuentas.TabIndex = 11
@@ -131,7 +135,7 @@ Partial Class FormMain
         'Label2
         '
         Me.Label2.AutoSize = True
-        Me.Label2.Location = New System.Drawing.Point(34, 80)
+        Me.Label2.Location = New System.Drawing.Point(34, 103)
         Me.Label2.Name = "Label2"
         Me.Label2.Size = New System.Drawing.Size(71, 13)
         Me.Label2.TabIndex = 10
@@ -177,7 +181,7 @@ Partial Class FormMain
         '
         Me.ComboBox_ProductoTPO.FormattingEnabled = True
         Me.ComboBox_ProductoTPO.Items.AddRange(New Object() {"1. CreditCard", "2. Boleto", "3. DAC"})
-        Me.ComboBox_ProductoTPO.Location = New System.Drawing.Point(37, 96)
+        Me.ComboBox_ProductoTPO.Location = New System.Drawing.Point(37, 119)
         Me.ComboBox_ProductoTPO.Name = "ComboBox_ProductoTPO"
         Me.ComboBox_ProductoTPO.Size = New System.Drawing.Size(121, 21)
         Me.ComboBox_ProductoTPO.TabIndex = 4
@@ -212,7 +216,7 @@ Partial Class FormMain
         '
         'ProcesaTodo
         '
-        Me.ProcesaTodo.Location = New System.Drawing.Point(332, 131)
+        Me.ProcesaTodo.Location = New System.Drawing.Point(332, 232)
         Me.ProcesaTodo.Name = "ProcesaTodo"
         Me.ProcesaTodo.Size = New System.Drawing.Size(112, 32)
         Me.ProcesaTodo.TabIndex = 0
@@ -246,6 +250,23 @@ Partial Class FormMain
         Me.tst_log_debug.Name = "tst_log_debug"
         Me.tst_log_debug.Size = New System.Drawing.Size(530, 488)
         Me.tst_log_debug.TabIndex = 1
+        '
+        'Label6
+        '
+        Me.Label6.AutoSize = True
+        Me.Label6.Location = New System.Drawing.Point(200, 25)
+        Me.Label6.Name = "Label6"
+        Me.Label6.Size = New System.Drawing.Size(57, 13)
+        Me.Label6.TabIndex = 15
+        Me.Label6.Text = "Estado UF"
+        '
+        'ComboBox_UF
+        '
+        Me.ComboBox_UF.FormattingEnabled = True
+        Me.ComboBox_UF.Location = New System.Drawing.Point(203, 43)
+        Me.ComboBox_UF.Name = "ComboBox_UF"
+        Me.ComboBox_UF.Size = New System.Drawing.Size(129, 21)
+        Me.ComboBox_UF.TabIndex = 16
         '
         'FormMain
         '
@@ -285,4 +306,6 @@ Partial Class FormMain
     Friend WithEvents Label2 As Label
     Friend WithEvents Label1 As Label
     Friend WithEvents tst_log_out As TextBox
+    Friend WithEvents ComboBox_UF As ComboBox
+    Friend WithEvents Label6 As Label
 End Class
