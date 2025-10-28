@@ -46,6 +46,10 @@ Public Class CreaCliente
     Public Property LastHttpStatus As Integer?
     Public Property ErrorMessage As String
     Public Property OnOut As Action(Of String) ' (el Form asigna AddressOf OutSink)
+    Public Property LastTipoSolicitado As Nullable(Of TipoCliente)
+    Public Property LastTipoResuelto As Nullable(Of TipoCliente)
+    Public Property LastDocumentoGenerado As String
+    Public Property LastDocumentoEsPF As Nullable(Of Boolean)
 
     Private Sub OUT(line As String)
         Try
@@ -62,17 +66,52 @@ Public Class CreaCliente
         Dim result As New CrearClienteResult()
 
         Try
+            LastTipoSolicitado = tipo
+            LastTipoResuelto = Nothing
+            LastDocumentoGenerado = Nothing
+            LastDocumentoEsPF = Nothing
+
+            OUT("[CREATE][TRACE] TipoCliente argumento bruto: " & tipo.ToString())
             Dim resolvedTipo As TipoCliente = tipo
             If Not [Enum].IsDefined(GetType(TipoCliente), resolvedTipo) Then
                 OUT("[CREATE][WARN] TipoCliente no reconocido (" & CInt(tipo).ToString() & "), usando PF por defecto.")
                 resolvedTipo = TipoCliente.PF
             End If
 
+            LastTipoResuelto = resolvedTipo
+
             OUT("[CREATE][FLOW] TipoCliente recibido: " & resolvedTipo.ToString())
 
             ' 1) Payload exacto
             Dim payload As JObject = Await BuildPayloadAsync(resolvedTipo, ufPreferida).ConfigureAwait(False)
             Dim json As String = payload.ToString(Formatting.None)
+            LastDocumentoGenerado = payload.Value(Of String)("AC_FLD_CPF_CNPJ")
+            LastDocumentoEsPF = (resolvedTipo = TipoCliente.PF)
+
+            Dim docLength As Integer = If(LastDocumentoGenerado Is Nothing, 0, LastDocumentoGenerado.Length)
+            If resolvedTipo = TipoCliente.PF AndAlso docLength <> 11 Then
+                OUT("[CREATE][WARN] Longitud inesperada para CPF: " & docLength.ToString())
+            ElseIf resolvedTipo = TipoCliente.PJ AndAlso docLength <> 14 Then
+                OUT("[CREATE][WARN] Longitud inesperada para CNPJ: " & docLength.ToString())
+            Else
+                OUT("[CREATE][CHECK] Documento generado: " & LastDocumentoGenerado & " (len=" & docLength.ToString() & ")")
+            End If
+
+            Dim pjFields As String() = {"AC_FLD_INSCRICAO_ESTADUAL", "AC_FLD_REPRESENTANTE_LEGAL", "AC_FLD_REPRESENTANTE_LEGAL_CPF", "AC_FLD_CNAE_CLIENTE"}
+            If resolvedTipo = TipoCliente.PJ Then
+                Dim missing = pjFields.Where(Function(f) Not payload.ContainsKey(f) OrElse String.IsNullOrWhiteSpace(payload.Value(Of String)(f))).ToArray()
+                If missing.Length > 0 Then
+                    OUT("[CREATE][WARN] Campos PJ faltantes o vacíos: " & String.Join(", ", missing))
+                Else
+                    OUT("[CREATE][CHECK] Campos PJ presentes: " & String.Join(", ", pjFields))
+                End If
+            Else
+                Dim stray = pjFields.Where(Function(f) payload.ContainsKey(f)).ToArray()
+                If stray.Length > 0 Then
+                    OUT("[CREATE][WARN] Campos PJ detectados para PF: " & String.Join(", ", stray))
+                End If
+            End If
+
             LastRequestJson = json
             LogRequest(json)
             OUT(">>> [CREATE][JSON] payload disponible en Log_Debug.")
