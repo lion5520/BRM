@@ -41,7 +41,72 @@ Public Class CompraProductos
         End Try
     End Sub
 
+    Private Sub LogBlock(header As String,
+                         body As String,
+                         Optional scope As String = "PURCHASE",
+                         Optional isJson As Boolean = True)
+        If Not String.IsNullOrWhiteSpace(header) Then
+            OUT(header)
+            LogInfoToLogger(scope, header)
+        End If
+        Dim formatted As String = If(isJson, FormatJsonForLog(body), body)
+        LogMultiline(formatted)
+        If isJson Then
+            LogJsonToLogger(scope, body)
+        Else
+            LogInfoToLogger(scope, formatted)
+        End If
+    End Sub
+
+    Private Sub LogMultiline(body As String)
+        If String.IsNullOrWhiteSpace(body) Then Return
+
+        Dim normalized As String = body.Replace(vbCrLf, vbLf).Replace(vbCr, vbLf)
+        Dim lines = normalized.Split(New String() {vbLf}, StringSplitOptions.None)
+        For Each line In lines
+            OUT(line)
+        Next
+    End Sub
+
+    Private Shared Function FormatJsonForLog(raw As String) As String
+        If String.IsNullOrWhiteSpace(raw) Then Return raw
+        Try
+            Dim token As JToken = JToken.Parse(raw)
+            Return token.ToString(Formatting.Indented)
+        Catch
+            Return raw
+        End Try
+    End Function
+
+    Private Sub LogInfoToLogger(scope As String, message As String)
+        If _logger Is Nothing OrElse String.IsNullOrWhiteSpace(message) Then Return
+        Try
+            _logger.LogData(message, scope)
+        Catch
+        End Try
+    End Sub
+
+    Private Sub LogJsonToLogger(scope As String, json As String)
+        If _logger Is Nothing OrElse String.IsNullOrWhiteSpace(json) Then Return
+        Try
+            Dim pretty As String = FormatJsonForLog(json)
+            _logger.LogJson(pretty, scope)
+        Catch
+        End Try
+    End Sub
+
     ' ===== API =====
+    Private _logger As IAppLogger
+
+    Public Property Logger As IAppLogger
+        Get
+            Return _logger
+        End Get
+        Set(value As IAppLogger)
+            _logger = value
+        End Set
+    End Property
+
     Public Async Function ComprarAsync(accountPoid As String,
                                        tipo As PayType,
                                        Optional persist As Boolean = True,
@@ -53,7 +118,9 @@ Public Class CompraProductos
             Dim poid As String = NormalizarAccountPoid(accountPoid)
             If String.IsNullOrWhiteSpace(poid) Then
                 ErrorMessage = "AccountPoid inválido."
-                OUT("[PURCHASE][ERROR] " & ErrorMessage)
+                Dim msg As String = "[PURCHASE][ERROR] " & ErrorMessage
+                OUT(msg)
+                LogInfoToLogger("PURCHASE_ERROR", msg)
                 Return r
             End If
 
@@ -71,20 +138,34 @@ Public Class CompraProductos
             Dim json As String = payload.ToString(Formatting.None)
 
             LastRequestJson = json
-            OUT(">>> [PURCHASE][JSON]")
-            OUT(LastRequestJson)
+            Dim accountLine As String = "[PURCHASE] AccountPoid=" & poid
+            OUT(accountLine)
+            LogInfoToLogger("PURCHASE", accountLine)
+
+            Dim protocolLine As String = "[PURCHASE] Protocol=" & protocol & " Contract=" & contractId & " Terminal=" & terminal
+            OUT(protocolLine)
+            LogInfoToLogger("PURCHASE", protocolLine)
+
+            Dim payTypeLine As String = "[PURCHASE] PayTypePin=" & pinPayType.ToString()
+            OUT(payTypeLine)
+            LogInfoToLogger("PURCHASE", payTypeLine)
+
+            LogBlock("=== PURCHASE REQUEST ===", LastRequestJson, "PURCHASE_REQUEST")
 
             If Not persist Then
                 r.Success = True
                 r.ProtocolId = protocol
                 r.ContractId = contractId
                 r.Terminal = terminal
-                OUT("[PURCHASE][DRY-RUN] persist=False, POST omitido.")
+                Dim dryRunMsg As String = "[PURCHASE][DRY-RUN] persist=False, POST omitido."
+                OUT(dryRunMsg)
+                LogInfoToLogger("PURCHASE_DRYRUN", dryRunMsg)
                 Return r
             End If
 
             ' 4) POST
             Dim endpoint As String = BASE_URL.TrimEnd("/"c) & PATH_PURCHASE
+            LogBlock("=== PURCHASE URL ===", endpoint, "PURCHASE_URL", isJson:=False)
             Using req As New HttpRequestMessage(HttpMethod.Post, endpoint)
                 req.Headers.Accept.Clear()
                 req.Headers.Accept.ParseAdd("application/json")
@@ -95,12 +176,18 @@ Public Class CompraProductos
                     LastHttpStatus = CInt(resp.StatusCode)
                     LastResponseBody = body
 
-                    OUT("<<< [PURCHASE][HTTP] " & LastHttpStatus.GetValueOrDefault().ToString())
-                    OUT("<<< [PURCHASE][RESP]")
-                    OUT(LastResponseBody)
+                    Dim reason As String = If(String.IsNullOrWhiteSpace(resp.ReasonPhrase), resp.StatusCode.ToString(), resp.ReasonPhrase)
+                    Dim statusLine As String = String.Format("Status: {0} {1}", LastHttpStatus.GetValueOrDefault(), reason)
+                    OUT(statusLine)
+                    LogInfoToLogger("PURCHASE_HTTP", statusLine)
+
+                    LogBlock("=== PURCHASE RESPONSE ===", body, "PURCHASE_RESPONSE")
 
                     ' 5) Validación mínima por protocolo (ajusta a tu log/tabla)
                     Dim ok As Boolean = ValidarCompraEnBdPorProtocolo(protocol)
+                    Dim validationLine As String = "[PURCHASE][VALIDATION] Resultado=" & If(ok, "OK", "SIN REGISTRO")
+                    OUT(validationLine)
+                    LogInfoToLogger("PURCHASE_VALIDATION", validationLine)
                     r.Success = ok
                     r.ProtocolId = protocol
                     r.ContractId = contractId
@@ -113,6 +200,12 @@ Public Class CompraProductos
         Catch ex As Exception
             ErrorMessage = ex.Message
             OUT("[PURCHASE][ERROR] " & ErrorMessage)
+            If _logger IsNot Nothing Then
+                Try
+                    _logger.LogError(ErrorMessage, ex, New With {.AccountPoid = accountPoid})
+                Catch
+                End Try
+            End If
             r.Success = False
             r.HttpStatus = LastHttpStatus
             r.RawBody = LastResponseBody
@@ -161,7 +254,9 @@ Public Class CompraProductos
         While attempts < 300
             Dim candidate As String = prefix & trySuffix.ToString("0000")
             If Not ProtocoloExiste(candidate) Then
-                OUT("[SEQ][PURCHASE] next unique → " & candidate)
+                Dim seqLine As String = "[SEQ][PURCHASE] next unique → " & candidate
+                OUT(seqLine)
+                LogInfoToLogger("PURCHASE_SEQ", seqLine)
                 Return candidate
             End If
             trySuffix += 1
@@ -187,7 +282,9 @@ Public Class CompraProductos
             Dim v2 As Integer = _db.ExecuteScalar(Of Integer)(sql2, New Dictionary(Of String, Object) From {{":pfx", prefix}}, 15)
             maxSuffix = Math.Max(maxSuffix, v2)
         Catch ex As Exception
-            OUT("[SEQ][PURCHASE][ERR] " & ex.Message)
+            Dim seqErr As String = "[SEQ][PURCHASE][ERR] " & ex.Message
+            OUT(seqErr)
+            LogInfoToLogger("PURCHASE_SEQ_ERROR", seqErr)
             Return -1
         End Try
         Return maxSuffix
@@ -204,6 +301,7 @@ Public Class CompraProductos
                 New Dictionary(Of String, Object) From {{":cand", candidate}}, 15)
             Return (v = 1)
         Catch
+            LogInfoToLogger("PURCHASE_SEQ_CHECK", "[SEQ][PURCHASE] ProtocoloExiste fallback True")
             Return True
         End Try
     End Function
@@ -232,6 +330,7 @@ Public Class CompraProductos
                 New Dictionary(Of String, Object) From {{":t", terminal}}, 15)
             Return (v = 1)
         Catch
+            LogInfoToLogger("PURCHASE_TERMINAL_CHECK", "[PURCHASE] TerminalExiste fallback False")
             Return False
         End Try
     End Function

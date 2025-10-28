@@ -9,6 +9,7 @@ Imports System.Threading.Tasks
 Imports System.Data
 Imports Newtonsoft.Json
 Imports Newtonsoft.Json.Linq
+Imports System.Linq
 
 ' ===== Servicio =====
 Public Class CreaCliente
@@ -299,11 +300,12 @@ Public Class CreaCliente
     Private Function LoadSeeds() As System.Collections.Generic.List(Of SeedRow)
         Dim res As New System.Collections.Generic.List(Of SeedRow)
         Try
-            Dim path As String = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "seeds_clientes_br.csv")
-            If Not File.Exists(path) Then
+            Dim path As String = ResolveSeedsPath()
+            If String.IsNullOrWhiteSpace(path) OrElse Not File.Exists(path) Then
                 OUT("[SEEDS] no encontrado: " & path)
                 Return res
             End If
+            OUT("[SEEDS] usando: " & path)
             Using sr As New StreamReader(path, Encoding.UTF8)
                 Dim header As String = sr.ReadLine() ' salta cabecera
                 While Not sr.EndOfStream
@@ -350,6 +352,26 @@ Public Class CreaCliente
         Next
         vals.Add(sb.ToString())
         Return vals.ToArray()
+    End Function
+
+    Private Function ResolveSeedsPath() As String
+        Dim baseDir As String = AppDomain.CurrentDomain.BaseDirectory
+        Dim candidates As New System.Collections.Generic.List(Of String)
+        candidates.Add(System.IO.Path.Combine(baseDir, "seeds_clientes_br.csv"))
+
+        Dim current As String = baseDir
+        For i As Integer = 0 To 3
+            current = System.IO.Path.GetFullPath(System.IO.Path.Combine(current, ".."))
+            candidates.Add(System.IO.Path.Combine(current, "seeds_clientes_br.csv"))
+        Next
+
+        For Each candidate In candidates
+            If File.Exists(candidate) Then
+                Return candidate
+            End If
+        Next
+
+        Return candidates.FirstOrDefault()
     End Function
 
     Private Function SoloDigitos(s As String) As String
