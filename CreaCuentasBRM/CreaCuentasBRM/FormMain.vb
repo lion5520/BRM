@@ -39,6 +39,10 @@ Public Class FormMain
         ResetCounters()
         ResetLabels()
 
+        'Carga menu de estados 
+        Me.ComboBox_UF.Items.AddRange(New Object() {"", "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"})
+        Me.ComboBox_UF.SelectedIndex = 0
+
         AppendDebug("[DATA] [INIT] Form listo.")
     End Sub
 
@@ -118,10 +122,18 @@ Public Class FormMain
                     Dim s As String = ComboBox_ClienteTPO.SelectedItem.ToString().Trim().ToUpperInvariant()
                     If s = "PJ" Then tipoCliente = CreaCliente.TipoCliente.PJ
                 End If
+
+                Dim uF_Seleccionada As String
+                If ComboBox_UF IsNot Nothing AndAlso ComboBox_UF.SelectedItem IsNot Nothing Then
+                    uF_Seleccionada = ComboBox_UF.SelectedItem.ToString().Trim().ToUpperInvariant()
+                Else
+                    uF_Seleccionada = "RJ"
+                End If
+
                 AppendDebug("[DATA] [FLOW] Tipo Cliente: " & tipoCliente.ToString())
 
                 AppendDebug("[DEBUG] [CREATE] Llamando CreaCliente…")
-                Dim rc As CrearClienteResult = Await _creador.CrearAsync(tipoCliente, Nothing, doPersist)
+                Dim rc As CrearClienteResult = Await _creador.CrearAsync(tipoCliente, uF_Seleccionada, doPersist)
                 If rc Is Nothing OrElse Not rc.Success Then
                     Dim detalle As String = If(String.IsNullOrWhiteSpace(_creador.ErrorMessage), "No se pudo crear el cliente.", _creador.ErrorMessage)
                     abortMessage = "[CREAR CUENTA] " & detalle
@@ -245,12 +257,13 @@ Public Class FormMain
             ProgressBar_general.Refresh()
         End If
 
-        TextBox_NoCuentas?.ResetText()
+        TextBox_NoCuentas.Value = 1
         ComboBox_ClienteTPO?.ResetText()
         ComboBox_ProductoTPO?.ResetText()
         If ComboBox_ClienteTPO IsNot Nothing Then ComboBox_ClienteTPO.SelectedIndex = -1
         If ComboBox_ProductoTPO IsNot Nothing Then ComboBox_ProductoTPO.SelectedIndex = -1
-        If CheckBox_Persistencia IsNot Nothing Then CheckBox_Persistencia.Checked = False
+        If CheckBox_Persistencia IsNot Nothing Then CheckBox_Persistencia.Checked = True
+        If ComboBox_UF IsNot Nothing Then ComboBox_UF.SelectedIndex = -1
 
         Me.UseWaitCursor = False
         Me.Cursor = Cursors.Default
