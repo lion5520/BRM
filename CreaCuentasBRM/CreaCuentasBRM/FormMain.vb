@@ -229,7 +229,7 @@ Public Class FormMain
                 _appLogger.LogError(ex, New With {.Operacion = "ProcesaTodo"})
             End If
             MessageBox.Show(Me, ex.Message, "Error inesperado", MessageBoxButtons.OK, MessageBoxIcon.Error)
-        
+
         Finally
             Me.UseWaitCursor = previousUseWait
             Me.Cursor = previousCursor

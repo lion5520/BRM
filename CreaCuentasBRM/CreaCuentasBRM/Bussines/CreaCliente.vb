@@ -62,8 +62,16 @@ Public Class CreaCliente
         Dim result As New CrearClienteResult()
 
         Try
+            Dim resolvedTipo As TipoCliente = tipo
+            If Not [Enum].IsDefined(GetType(TipoCliente), resolvedTipo) Then
+                OUT("[CREATE][WARN] TipoCliente no reconocido (" & CInt(tipo).ToString() & "), usando PF por defecto.")
+                resolvedTipo = TipoCliente.PF
+            End If
+
+            OUT("[CREATE][FLOW] TipoCliente recibido: " & resolvedTipo.ToString())
+
             ' 1) Payload exacto
-            Dim payload As JObject = Await BuildPayloadAsync(tipo, ufPreferida).ConfigureAwait(False)
+            Dim payload As JObject = Await BuildPayloadAsync(resolvedTipo, ufPreferida).ConfigureAwait(False)
             Dim json As String = payload.ToString(Formatting.None)
             LastRequestJson = json
             LogRequest(json)
@@ -201,6 +209,8 @@ Public Class CreaCliente
         Dim protocol As String = GenerateUniqueProtocolId(PROTOCOL_PREFIX)
         Dim isPF As Boolean = (tipo = TipoCliente.PF)
         Dim doc As String = If(isPF, GenerarCPFValidoDemo(), GenerarCNPJValidoDemo())
+
+        OUT("[CREATE][BUILD] TipoCliente=" & If(isPF, "PF", "PJ") & " Documento=" & doc)
 
         ' Address (pipe-fixed 8 partes)
         Dim addressParts As String() = {
@@ -361,16 +371,9 @@ Public Class CreaCliente
     Private Shared ReadOnly _rnd As New Random()
 
     Private Function PickSeedRow(Optional ufPreferida As String = Nothing) As SeedRow
-        Dim list = LoadSeeds()
-        Dim ufList As System.Collections.Generic.List(Of SeedRow) = list
-        If Not String.IsNullOrWhiteSpace(ufPreferida) Then
-            Dim targetUf As String = ufPreferida.Trim().ToUpperInvariant()
-            Dim matches = list.Where(Function(s) String.Equals(s.UF, targetUf, StringComparison.OrdinalIgnoreCase)).ToList()
-            If matches.Count > 0 Then
-                ufList = matches
-            End If
-        End If
-        If list.Count = 0 Then
+        Dim seeds = LoadSeeds()
+
+        If seeds.Count = 0 Then
             Return New SeedRow With {
                 .Name = "ORLANDO ROMERO",
                 .StreetType = "Rua",
@@ -379,13 +382,22 @@ Public Class CreaCliente
                 .City = "SERRA",
                 .UF = "ES",
                 .Zip = "29161709",
+                .AddressNumber = "120",
+                .AddressComplement = String.Empty,
                 .Phone = "27998555123",
                 .Email = "orlando.romero@example.com"
             }
         End If
-        Return list(_rnd.Next(0, list.Count))
-        Dim selected = ufList(_rnd.Next(0, ufList.Count))
-        Return selected
+        If Not String.IsNullOrWhiteSpace(ufPreferida) Then
+            Dim targetUf As String = ufPreferida.Trim().ToUpperInvariant()
+            For Each seed In seeds
+                If String.Equals(seed.UF, targetUf, StringComparison.OrdinalIgnoreCase) Then
+                    Return seed
+                End If
+            Next
+        End If
+
+        Return seeds(_rnd.Next(0, seeds.Count))
     End Function
 
     Private Function LoadSeeds() As System.Collections.Generic.List(Of SeedRow)

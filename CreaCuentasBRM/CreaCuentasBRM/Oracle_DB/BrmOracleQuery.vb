@@ -78,6 +78,22 @@ Public NotInheritable Class BrmOracleQuery
         Return cmd.ExecuteReader(CommandBehavior.CloseConnection)
     End Function
 
+    Public Function ExecuteNonQuery(sql As String,
+                                    Optional parameters As Dictionary(Of String, Object) = Nothing,
+                                    Optional timeoutSeconds As Integer = 60) As Integer
+        Dim fixedSql As String = PreprocessSql(sql)
+
+        Using cn As New OracleConnection(_connString)
+            cn.Open()
+            Using cmd As New OracleCommand(fixedSql, cn)
+                cmd.BindByName = True
+                cmd.CommandTimeout = timeoutSeconds
+                AddParams(cmd, parameters)
+                Return cmd.ExecuteNonQuery()
+            End Using
+        End Using
+    End Function
+
     ' ------------------- HELPERS -------------------
 
     Private Shared Sub AddParams(cmd As OracleCommand, parameters As Dictionary(Of String, Object))

@@ -1,20 +1,28 @@
 name,street_type,street_name,neighborhood,city,uf,cep,address_number,address_complement,phone,email
-Orlando Romero,Rua,Fernandes Lima,Centro,Arapiraca,AL,57300170,123,,82998765431,orlando.romero@example.com
-Renata Almeida,Avenida,Brasil,Jardim América,São Paulo,SP,01430000,500,,11987654321,renata.almeida@example.com
-Zuli Carvalho,Avenida,Eldes Scherrer Souza,Parque Residencial Laranjeiras,Serra,ES,29165670,1000,,27998555123,zuli.carvalho@example.com
-Ricardo Silva,Rua,Barreto Leme,Centro,Campinas,SP,13010136,1550,,19988443322,ricardo.silva@example.com
-Mariana Souza,Rua,XV de Novembro,Centro,Curitiba,PR,80020010,1299,,41988776655,mariana.souza@example.com
-Diego Oliveira,Avenida,Atlântica,Copacabana,Rio de Janeiro,RJ,22021001,1702,,21999887766,diego.oliveira@example.com
-Ana Santos,Rua,Chile,Centro Histórico,Salvador,BA,40020000,20,,71998112233,ana.santos@example.com
-Paulo Pereira,Avenida,Afonso Pena,Centro,Belo Horizonte,MG,30130005,1212,,31997766554,paulo.pereira@example.com
-Camila Costa,Avenida,Independência,Independência,Porto Alegre,RS,90035900,900,,51999123456,camila.costa@example.com
-Felipe Ferreira,Rua,da Assembleia,Centro,Rio de Janeiro,RJ,20011001,100,,21988770011,felipe.ferreira@example.com
-Juliana Rodrigues,Rua,das Acácias,Jardim,Sorocaba,SP,18048005,210,,15998001234,juliana.rodrigues@example.com
-Bruno Lima,Avenida,Beira Mar,Meireles,Fortaleza,CE,60165121,2450,,85997334455,bruno.lima@example.com
-Patrícia Gomes,Travessa,da Paz,Umarizal,Belém,PA,66055350,150,,91998111222,patricia.gomes@example.com
-Rafael Ribeiro,Rua,dos Andradas,Centro,Pelotas,RS,96020000,1234,,53998990077,rafael.ribeiro@example.com
-Luana Martins,Avenida,Paulista,Bela Vista,São Paulo,SP,01310100,1578,,11990077665,luana.martins@example.com
-Gustavo Araújo,Rua,Santos Dumont,Centro,Maceió,AL,57020010,125,,82997003344,gustavo.araujo@example.com
-Carla Mendes,Rua,Bahia,Funcionários,Belo Horizonte,MG,30160011,1033,,31996001212,carla.mendes@example.com
-Thiago Barros,Avenida,Beira Mar,Meireles,Fortaleza,CE,60165210,3980,,85995007890,thiago.barros@example.com
-Natalia Rocha,Rua,Felipe Schmidt,Centro,Florianópolis,SC,88010000,390,,48998887766,natalia.rocha@example.com
+TEST APP ORA_AC,Avenida,Getúlio Vargas,Centro,Rio Branco,AC,69900000,120,,68991234567,contato.ac@example.com
+TEST APP ORA_AL,Rua,Santos Dumont,Centro,Maceió,AL,57020010,125,,82998111222,contato.al@example.com
+TEST APP ORA_AP,Avenida,Fab,Centro,Macapá,AP,68900000,450,,96998112233,contato.ap@example.com
+TEST APP ORA_AM,Avenida,Eduardo Ribeiro,Centro,Manaus,AM,69010000,802,,92998765432,contato.am@example.com
+TEST APP ORA_BA,Rua,Chile,Centro Histórico,Salvador,BA,40020000,20,,71998112233,contato.ba@example.com
+TEST APP ORA_CE,Avenida,Beira Mar,Meireles,Fortaleza,CE,60165121,2450,,85997334455,contato.ce@example.com
+TEST APP ORA_DF,Avenida,W3 Sul,Asa Sul,Brasília,DF,70300000,510,,61998770011,contato.df@example.com
+TEST APP ORA_ES,Avenida,Nossa Senhora da Penha,Santa Lúcia,Vitória,ES,29055000,1310,,27998123456,contato.es@example.com
+TEST APP ORA_GO,Avenida,Goiás,Setor Central,Goiânia,GO,74000000,800,,62998441122,contato.go@example.com
+TEST APP ORA_MA,Rua,Grande,Centro,São Luís,MA,65020000,450,,98998111223,contato.ma@example.com
+TEST APP ORA_MT,Avenida,Getúlio Vargas,Centro,Cuiabá,MT,78005000,915,,65998123456,contato.mt@example.com
+TEST APP ORA_MS,Avenida,Afonso Pena,Centro,Campo Grande,MS,79002000,1120,,67988776655,contato.ms@example.com
+TEST APP ORA_MG,Rua,Bahia,Funcionários,Belo Horizonte,MG,30160011,1033,,31996001212,contato.mg@example.com
+TEST APP ORA_PA,Travessa,da Paz,Umarizal,Belém,PA,66055350,150,,91998111222,contato.pa@example.com
+TEST APP ORA_PB,Avenida,Epitácio Pessoa,Tambaú,João Pessoa,PB,58032000,2300,,83998001234,contato.pb@example.com
+TEST APP ORA_PR,Rua,XV de Novembro,Centro,Curitiba,PR,80020010,1299,,41988776655,contato.pr@example.com
+TEST APP ORA_PE,Avenida,Guararapes,Santo Antônio,Recife,PE,50010000,120,,81995007890,contato.pe@example.com
+TEST APP ORA_PI,Avenida,Frei Serafim,Centro,Teresina,PI,64000020,900,,86998887766,contato.pi@example.com
+TEST APP ORA_RJ,Rua,da Assembleia,Centro,Rio de Janeiro,RJ,19769459,100,,21988770011,contato.rj@example.com
+TEST APP ORA_RN,Avenida,Senador Salgado Filho,Lagoa Nova,Natal,RN,59022000,1700,,84997654321,contato.rn@example.com
+TEST APP ORA_RS,Avenida,Independência,Independência,Porto Alegre,RS,90035900,900,,51999123456,contato.rs@example.com
+TEST APP ORA_RO,Avenida,Sete de Setembro,Centro,Porto Velho,RO,76801014,1450,,69998761234,contato.ro@example.com
+TEST APP ORA_RR,Avenida,Ene Garcez,Centro,Boa Vista,RR,69301000,2270,,95998114567,contato.rr@example.com
+TEST APP ORA_SC,Rua,Felipe Schmidt,Centro,Florianópolis,SC,88010000,390,,48998775644,contato.sc@example.com
+TEST APP ORA_SP,Avenida,Paulista,Bela Vista,São Paulo,SP,01310100,1578,,11990077665,contato.sp@example.com
+TEST APP ORA_SE,Rua,Itabaianinha,Centro,Aracaju,SE,49010020,540,,79998112200,contato.se@example.com
+TEST APP ORA_TO,Avenida,JK,Plano Diretor Sul,Palmas,TO,77001090,120,,63998770022,contato.to@example.com

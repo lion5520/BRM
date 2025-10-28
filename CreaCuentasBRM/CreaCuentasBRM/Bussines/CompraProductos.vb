@@ -21,7 +21,7 @@ Public Class CompraProductos
 
     ' ===== Config =====
     Public Property BASE_URL As String = "http://brmdev.hml.ocpcorp.oi.intranet"
-    Private Const PATH_PURCHASE As String = "/BRMCustCustomServices/resources/BRMPurchaseCustomServicesREST/PurchasePlans"
+    Private Const PATH_PURCHASE As String = "/BRMCustCustomServices/resources/BRMAccountCustomServicesREST/purchasePlans"
     Private Const PROTOCOL_PREFIX As String = "ORACLE_SAP_TEST_"
     Private Const CONTRACT_PREFIX As String = "TP_"
     Private Const BILLINFO_POID As String = "0.0.0.1 /billinfo -1 0"
@@ -191,10 +191,27 @@ Public Class CompraProductos
                     Dim validationLine As String = "[PURCHASE][VALIDATION][PROTOCOLO] Resultado=" & If(okProtocolo, "OK", "SIN REGISTRO")
                     OUT(validationLine)
                     LogInfoToLogger("PURCHASE_VALIDATION", validationLine)
-                    Dim okProductos As Boolean = ValidarProductosActivosPorAccount(poid)
-                    Dim validationProductsLine As String = "[PURCHASE][VALIDATION][PRODUCTOS] Resultado=" & If(okProductos, "OK", "SIN PRODUCTOS ACTIVOS")
-                    OUT(validationProductsLine)
-                    LogInfoToLogger("PURCHASE_VALIDATION", validationProductsLine)
+                    Const maxProductValidationAttempts As Integer = 5
+                    Const productValidationDelaySeconds As Integer = 15
+                    Dim okProductos As Boolean = False
+                    Dim intentoProductos As Integer = 0
+
+                    Do
+                        intentoProductos += 1
+                        okProductos = ValidarProductosActivosPorAccount(poid)
+                        Dim validationProductsLine As String = String.Format("[PURCHASE][VALIDATION][PRODUCTOS][INTENTO {0}] Resultado={1}", intentoProductos, If(okProductos, "OK", "SIN PRODUCTOS ACTIVOS"))
+                        OUT(validationProductsLine)
+                        LogInfoToLogger("PURCHASE_VALIDATION", validationProductsLine)
+
+                        If okProductos OrElse intentoProductos >= maxProductValidationAttempts Then
+                            Exit Do
+                        End If
+
+                        Dim retryLine As String = String.Format("[PURCHASE][VALIDATION][PRODUCTOS] Reintentando en {0} segundos…", productValidationDelaySeconds)
+                        OUT(retryLine)
+                        LogInfoToLogger("PURCHASE_VALIDATION", retryLine)
+                        Await Task.Delay(TimeSpan.FromSeconds(productValidationDelaySeconds)).ConfigureAwait(False)
+                    Loop
 
                     r.Success = okProtocolo AndAlso okProductos
 
