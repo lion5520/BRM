@@ -182,27 +182,45 @@ Public Class CreaCliente
 
     ' ===== Build JSON =====
     Private Async Function BuildPayloadAsync(tipo As TipoCliente, ufPreferida As String) As Task(Of JObject)
-        Dim seed = PickSeedRow()
+        Dim seed = PickSeedRow(ufPreferida)
         Dim name As String = If(String.IsNullOrWhiteSpace(seed.Name), "ORLANDO ROMERO", seed.Name.ToUpperInvariant())
         Dim email As String = If(String.IsNullOrWhiteSpace(seed.Email), "demo@nio.local", seed.Email)
         Dim phoneDigits As String = SoloDigitos(If(String.IsNullOrWhiteSpace(seed.Phone), "47998555123", seed.Phone))
         Dim ufSeed As String = If(String.IsNullOrWhiteSpace(seed.UF), "DF", seed.UF.ToUpperInvariant())
         Dim uf As String = If(String.IsNullOrWhiteSpace(ufPreferida), ufSeed, ufPreferida.ToUpperInvariant())
         Dim city As String = If(String.IsNullOrWhiteSpace(seed.City), "BRASILIA", seed.City.ToUpperInvariant())
+        Dim zipRaw As String = If(String.IsNullOrWhiteSpace(seed.Zip), "70040900", seed.Zip)
+        Dim zip As String = SoloDigitos(zipRaw)
+        If String.IsNullOrWhiteSpace(zip) Then zip = "70040900"
+        Dim streetType As String = If(String.IsNullOrWhiteSpace(seed.StreetType), "RUA", seed.StreetType.ToUpperInvariant())
+        Dim streetName As String = If(String.IsNullOrWhiteSpace(seed.StreetName), "ODILON AUTO", seed.StreetName.ToUpperInvariant())
+        Dim addressNumber As String = If(String.IsNullOrWhiteSpace(seed.AddressNumber), "120", seed.AddressNumber.Trim())
+        Dim neighborhood As String = If(String.IsNullOrWhiteSpace(seed.Neighborhood), "JARDIM CARAPINA", seed.Neighborhood.ToUpperInvariant())
+        Dim complement As String = If(String.IsNullOrWhiteSpace(seed.AddressComplement), String.Empty, seed.AddressComplement.ToUpperInvariant())
 
         Dim protocol As String = GenerateUniqueProtocolId(PROTOCOL_PREFIX)
         Dim isPF As Boolean = (tipo = TipoCliente.PF)
         Dim doc As String = If(isPF, GenerarCPFValidoDemo(), GenerarCNPJValidoDemo())
 
         ' Address (pipe-fixed 8 partes)
-        Dim addressPipe As String = "19769459|Rua|Governador Roberto Silveira|317|São Pedro|||"
+        Dim addressParts As String() = {
+            zip,
+            streetType,
+            streetName,
+            addressNumber,
+            neighborhood,
+            complement,
+            String.Empty,
+            String.Empty
+        }
+        Dim addressPipe As String = String.Join("|", addressParts)
 
         Dim o As New JObject()
         o.Add("AC_FLD_PROTOCOL_ID", protocol)
         o.Add("BUSINESS_TYPE", If(isPF, "1", "2"))
         o.Add("NAMEINFO", name)
         o.Add("ADDRESS", addressPipe)
-        o.Add("ZIP", "19769459")
+        o.Add("ZIP", zip)
         o.Add("CITY", city)
         o.Add("STATE", uf)
         o.Add("COUNTRY", "Brasil")
@@ -212,8 +230,8 @@ Public Class CreaCliente
         o.Add("AC_FLD_CPF_CNPJ", doc)
         o.Add("COUNTRY_CODE", "")
         o.Add("CITY_CODE", "")
-        o.Add("AC_FLD_ADDRESS_NUMBER", "317")
-        o.Add("AC_FLD_NEIGHBORHOOD", "São Pedro")
+        o.Add("AC_FLD_ADDRESS_NUMBER", addressNumber)
+        o.Add("AC_FLD_NEIGHBORHOOD", neighborhood)
         o.Add("AC_FLD_BIRTHDAY_T", "1990-05-06")
         o.Add("AC_FLD_GENDER", "Masculino")
         o.Add("AC_FLD_EMAIL", email)
@@ -334,14 +352,24 @@ Public Class CreaCliente
         Public City As String
         Public UF As String
         Public Zip As String
+        Public AddressNumber As String
+        Public AddressComplement As String
         Public Phone As String
         Public Email As String
     End Structure
 
     Private Shared ReadOnly _rnd As New Random()
 
-    Private Function PickSeedRow() As SeedRow
+    Private Function PickSeedRow(Optional ufPreferida As String = Nothing) As SeedRow
         Dim list = LoadSeeds()
+        Dim ufList As System.Collections.Generic.List(Of SeedRow) = list
+        If Not String.IsNullOrWhiteSpace(ufPreferida) Then
+            Dim targetUf As String = ufPreferida.Trim().ToUpperInvariant()
+            Dim matches = list.Where(Function(s) String.Equals(s.UF, targetUf, StringComparison.OrdinalIgnoreCase)).ToList()
+            If matches.Count > 0 Then
+                ufList = matches
+            End If
+        End If
         If list.Count = 0 Then
             Return New SeedRow With {
                 .Name = "ORLANDO ROMERO",
@@ -356,6 +384,8 @@ Public Class CreaCliente
             }
         End If
         Return list(_rnd.Next(0, list.Count))
+        Dim selected = ufList(_rnd.Next(0, ufList.Count))
+        Return selected
     End Function
 
     Private Function LoadSeeds() As System.Collections.Generic.List(Of SeedRow)
@@ -373,7 +403,7 @@ Public Class CreaCliente
                     Dim line As String = sr.ReadLine()
                     If String.IsNullOrWhiteSpace(line) Then Continue While
                     Dim cols = ParseCsvLine(line)
-                    If cols.Length >= 9 Then
+                    If cols.Length >= 11 Then
                         Dim s As New SeedRow With {
                             .Name = cols(0),
                             .StreetType = cols(1),
@@ -382,8 +412,10 @@ Public Class CreaCliente
                             .City = cols(4),
                             .UF = cols(5),
                             .Zip = cols(6),
-                            .Phone = cols(7),
-                            .Email = cols(8)
+                            .AddressNumber = cols(7),
+                            .AddressComplement = cols(8),
+                            .Phone = cols(9),
+                            .Email = cols(10)
                         }
                         res.Add(s)
                     End If
