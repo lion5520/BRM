@@ -25,6 +25,8 @@ Partial Class FormMain
         Me.TabControl1 = New System.Windows.Forms.TabControl()
         Me.TabPage1 = New System.Windows.Forms.TabPage()
         Me.TabPage2 = New System.Windows.Forms.TabPage()
+        Me.ComboBox_UF = New System.Windows.Forms.ComboBox()
+        Me.Label6 = New System.Windows.Forms.Label()
         Me.Label5 = New System.Windows.Forms.Label()
         Me.Label4 = New System.Windows.Forms.Label()
         Me.Label3 = New System.Windows.Forms.Label()
@@ -42,12 +44,12 @@ Partial Class FormMain
         Me.TabPage4 = New System.Windows.Forms.TabPage()
         Me.tst_log_out = New System.Windows.Forms.TextBox()
         Me.tst_log_debug = New System.Windows.Forms.TextBox()
-        Me.Label6 = New System.Windows.Forms.Label()
-        Me.ComboBox_UF = New System.Windows.Forms.ComboBox()
+        Me.DataGridView1 = New System.Windows.Forms.DataGridView()
         Me.TabControl1.SuspendLayout()
         Me.TabPage2.SuspendLayout()
         CType(Me.TextBox_NoCuentas, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.TabPage4.SuspendLayout()
+        CType(Me.DataGridView1, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.SuspendLayout()
         '
         'TabControl1
@@ -73,6 +75,7 @@ Partial Class FormMain
         '
         'TabPage2
         '
+        Me.TabPage2.Controls.Add(Me.DataGridView1)
         Me.TabPage2.Controls.Add(Me.ComboBox_UF)
         Me.TabPage2.Controls.Add(Me.Label6)
         Me.TabPage2.Controls.Add(Me.Label5)
@@ -96,6 +99,23 @@ Partial Class FormMain
         Me.TabPage2.TabIndex = 1
         Me.TabPage2.Text = "Cuentas"
         Me.TabPage2.UseVisualStyleBackColor = True
+        '
+        'ComboBox_UF
+        '
+        Me.ComboBox_UF.FormattingEnabled = True
+        Me.ComboBox_UF.Location = New System.Drawing.Point(203, 43)
+        Me.ComboBox_UF.Name = "ComboBox_UF"
+        Me.ComboBox_UF.Size = New System.Drawing.Size(129, 21)
+        Me.ComboBox_UF.TabIndex = 16
+        '
+        'Label6
+        '
+        Me.Label6.AutoSize = True
+        Me.Label6.Location = New System.Drawing.Point(200, 25)
+        Me.Label6.Name = "Label6"
+        Me.Label6.Size = New System.Drawing.Size(57, 13)
+        Me.Label6.TabIndex = 15
+        Me.Label6.Text = "Estado UF"
         '
         'Label5
         '
@@ -251,22 +271,13 @@ Partial Class FormMain
         Me.tst_log_debug.Size = New System.Drawing.Size(530, 488)
         Me.tst_log_debug.TabIndex = 1
         '
-        'Label6
+        'DataGridView1
         '
-        Me.Label6.AutoSize = True
-        Me.Label6.Location = New System.Drawing.Point(200, 25)
-        Me.Label6.Name = "Label6"
-        Me.Label6.Size = New System.Drawing.Size(57, 13)
-        Me.Label6.TabIndex = 15
-        Me.Label6.Text = "Estado UF"
-        '
-        'ComboBox_UF
-        '
-        Me.ComboBox_UF.FormattingEnabled = True
-        Me.ComboBox_UF.Location = New System.Drawing.Point(203, 43)
-        Me.ComboBox_UF.Name = "ComboBox_UF"
-        Me.ComboBox_UF.Size = New System.Drawing.Size(129, 21)
-        Me.ComboBox_UF.TabIndex = 16
+        Me.DataGridView1.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize
+        Me.DataGridView1.Location = New System.Drawing.Point(489, 25)
+        Me.DataGridView1.Name = "DataGridView1"
+        Me.DataGridView1.Size = New System.Drawing.Size(618, 455)
+        Me.DataGridView1.TabIndex = 17
         '
         'FormMain
         '
@@ -282,6 +293,7 @@ Partial Class FormMain
         CType(Me.TextBox_NoCuentas, System.ComponentModel.ISupportInitialize).EndInit()
         Me.TabPage4.ResumeLayout(False)
         Me.TabPage4.PerformLayout()
+        CType(Me.DataGridView1, System.ComponentModel.ISupportInitialize).EndInit()
         Me.ResumeLayout(False)
 
     End Sub
@@ -308,4 +320,5 @@ Partial Class FormMain
     Friend WithEvents tst_log_out As TextBox
     Friend WithEvents ComboBox_UF As ComboBox
     Friend WithEvents Label6 As Label
+    Friend WithEvents DataGridView1 As DataGridView
 End Class

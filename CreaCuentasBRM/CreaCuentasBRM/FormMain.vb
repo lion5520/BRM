@@ -15,6 +15,8 @@ Public Class FormMain
     Private _totalCreados As Integer
     Private _totalErrores As Integer
 
+    Private ReadOnly _db As BrmOracleQuery = New BrmOracleQuery()
+
     Private Sub FormMain_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         ' Engancha canal OUT
         _creador.OnOut = AddressOf OutSink
@@ -117,17 +119,25 @@ Public Class FormMain
                     ProgressBar_general.Refresh()
                 End If
 
-                Dim tipoCliente As CreaCliente.TipoCliente = CreaCliente.TipoCliente.PF
+                Dim tipoCliente As CreaCliente.TipoCliente = CreaCliente.TipoCliente.CPF
                 If ComboBox_ClienteTPO IsNot Nothing AndAlso ComboBox_ClienteTPO.SelectedItem IsNot Nothing Then
                     Dim s As String = ComboBox_ClienteTPO.SelectedItem.ToString().Trim().ToUpperInvariant()
-                    If s = "PJ" Then tipoCliente = CreaCliente.TipoCliente.PJ
+                    If s = "CNPJ" OrElse s = "CNPJ" Then
+                        tipoCliente = CreaCliente.TipoCliente.CNPJ
+                    ElseIf s = "CPF" OrElse s = "CPF" Then
+                        tipoCliente = CreaCliente.TipoCliente.CPF
+                    End If
                 End If
 
                 Dim uF_Seleccionada As String
                 If ComboBox_UF IsNot Nothing AndAlso ComboBox_UF.SelectedItem IsNot Nothing Then
                     uF_Seleccionada = ComboBox_UF.SelectedItem.ToString().Trim().ToUpperInvariant()
                 Else
-                    uF_Seleccionada = "RJ"
+                    'uF_Seleccionada = "RJ"
+                    ' Selecciona un valor aleatorio dentro del rango de Items
+                    Dim rnd As New Random()
+                    Dim idx As Integer = rnd.Next(0, ComboBox_UF.Items.Count)
+                    uF_Seleccionada = ComboBox_UF.Items(idx).ToString().Trim().ToUpperInvariant()
                 End If
 
                 AppendDebug("[DATA] [FLOW] Tipo Cliente: " & tipoCliente.ToString())
@@ -152,17 +162,31 @@ Public Class FormMain
                 End If
 
                 Dim pay As CompraProductos.PayType = CompraProductos.PayType.Boleto
-                If ComboBox_ProductoTPO IsNot Nothing AndAlso ComboBox_ProductoTPO.SelectedItem IsNot Nothing Then
-                    Dim p As String = ComboBox_ProductoTPO.SelectedItem.ToString().Trim().ToUpperInvariant()
-                    Select Case p
-                        Case "CREDITCARD", "CREDIT CARD", "CC"
+
+                If ComboBox_ProductoTPO IsNot Nothing AndAlso ComboBox_ProductoTPO.Items.Count > 0 Then
+                    ' Si no hay selección, elegir aleatoriamente uno
+                    If ComboBox_ProductoTPO.SelectedItem Is Nothing Then
+                        Dim rnd As New Random()
+                        ComboBox_ProductoTPO.SelectedIndex = rnd.Next(0, ComboBox_ProductoTPO.Items.Count)
+                    End If
+
+                    ' Obtener texto y limpiar prefijo numérico tipo "1." o "2."
+                    Dim raw As String = ComboBox_ProductoTPO.SelectedItem.ToString().Trim()
+                    Dim limpio As String = System.Text.RegularExpressions.Regex.Replace(raw, "^\d+\.\s*", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase).ToUpperInvariant()
+
+                    ' Ahora el texto limpio coincide correctamente con los valores reales
+                    Select Case limpio
+                        Case "CREDITCARD"
                             pay = CompraProductos.PayType.CreditCard
+                        Case "BOLETO"
+                            pay = CompraProductos.PayType.Boleto
                         Case "DAC"
                             pay = CompraProductos.PayType.DAC
                         Case Else
                             pay = CompraProductos.PayType.Boleto
                     End Select
                 End If
+
 
                 AppendDebug("[DEBUG] [PURCHASE] Llamando CompraProductos…")
                 Dim rb As CompraProductosResult = Await _comprador.ComprarAsync(rc.AccountPoid, pay, doPersist, Nothing)
@@ -202,6 +226,17 @@ Public Class FormMain
                     ProgressBar_general.Value = Math.Min(ProgressBar_general.Maximum, currentStep)
                     ProgressBar_general.Refresh()
                 End If
+
+                Dim dtGlobal As DataTable
+                ' Llamadas consecutivas con distintos POIDs
+                dtGlobal = ObtenerDatosPorPoid_Acumulativo(ExtraerAccountObjId(rc.AccountPoid))
+                ' Asignar al DataGridView
+                With DataGridView1
+                    .AutoGenerateColumns = True    ' Permite generar columnas automáticamente
+                    .DataSource = dtGlobal         ' Enlaza el DataTable acumulado
+                    .Refresh()
+                End With
+
                 IncrementCreados()
                 AppendDebug("[DATA] [FLOW] Iteración #" & i.ToString() & " completada.")
             Next
@@ -233,9 +268,37 @@ Public Class FormMain
         Finally
             Me.UseWaitCursor = previousUseWait
             Me.Cursor = previousCursor
+            TabControl1.SelectTab(TabPage2)
+            TabControl1.Refresh()
             If ProcesaTodo IsNot Nothing Then ProcesaTodo.Enabled = True
         End Try
     End Sub
+
+    Private Shared Function ExtraerAccountObjId(accountPoid As String) As Long
+        If String.IsNullOrWhiteSpace(accountPoid) Then Return Nothing
+
+        Dim cleaned As String = accountPoid.Trim()
+
+        Dim idx As Integer = cleaned.IndexOf("/account", StringComparison.OrdinalIgnoreCase)
+        If idx >= 0 Then
+            Dim tail As String = cleaned.Substring(idx + 8).Trim()
+            Dim parts = tail.Split(New Char() {" "c, "/"c}, StringSplitOptions.RemoveEmptyEntries)
+            For Each part In parts
+                Dim value As Long
+                If Long.TryParse(part, value) Then
+                    Return value
+                End If
+            Next
+        End If
+
+        Dim numericOnly As String = New String(cleaned.Where(AddressOf Char.IsDigit).ToArray())
+        Dim parsed As Long
+        If Not String.IsNullOrWhiteSpace(numericOnly) AndAlso Long.TryParse(numericOnly, parsed) Then
+            Return parsed
+        End If
+
+        Return Nothing
+    End Function
 
     Private Sub Button_limpiar_Click(sender As Object, e As EventArgs) Handles Button_limpiar.Click
         ResetInterface()
@@ -244,6 +307,13 @@ Public Class FormMain
     Private Sub ResetInterface()
         ResetCounters()
         ResetLabels()
+
+        ' Limpia el acumulado y el grid
+        _dtAcumulado = Nothing
+        DataGridView1.DataSource = Nothing
+        DataGridView1.Rows.Clear()
+        DataGridView1.Visible = False
+
 
         If _appLogger IsNot Nothing Then
             _appLogger.Clear()
@@ -303,5 +373,77 @@ Public Class FormMain
             target.Text = value
         End If
     End Sub
+
+
+    ' Declaración de DataTable a nivel de clase (global)
+    Private _dtAcumulado As DataTable
+
+    Private Function ObtenerDatosPorPoid_Acumulativo(poid As Long) As DataTable
+        Try
+            ' Si es la primera vez, inicializa la estructura
+            If _dtAcumulado Is Nothing Then
+                _dtAcumulado = New DataTable("Acumulado")
+            End If
+
+            ' Query SQL base
+            Dim sql As String =
+                "SELECT 
+                C.POID_ID0 AS ACCOUNT_POID,
+                PA.CPF_CNPJ,
+                TO_CHAR(
+                    (TIMESTAMP '1970-01-01 00:00:00 +00:00' + NUMTODSINTERVAL(P.CREATED_T,'SECOND')) 
+                    AT TIME ZONE 'GMT','DD.MM.YYYY HH24:MI:SS'
+                ) AS DT_ATIVADO,
+                A.STATE AS UF,
+                DECODE(C.BUSINESS_TYPE, 1, 'CPF', 2, 'CNPJ') AS TIPO_CLIENTE,
+                APT.PAY_TYPE,
+                CAA.PAY_TYPE_DESC,
+                CAA.AGENT AS NOME_AGENT,
+                (
+                    SELECT COUNT(*) 
+                    FROM PIN.PURCHASED_PRODUCT_T PP
+                    JOIN PIN.AC_PURCHASED_PRODUCT_T APP ON APP.PURCHASED_PRODUCT_OBJ_ID0 = PP.POID_ID0
+                    JOIN PIN.SERVICE_T S ON S.POID_ID0 = PP.SERVICE_OBJ_ID0
+                    WHERE PP.ACCOUNT_OBJ_ID0 = C.POID_ID0
+                      AND S.STATUS = 10100
+                ) AS PROD_ACTIVOS
+            FROM 
+                PIN.PROFILE_T P
+                JOIN PIN.AC_PROFILE_ACCOUNT_T PA ON PA.OBJ_ID0 = P.POID_ID0
+                JOIN PIN.ACCOUNT_NAMEINFO_T A     ON P.ACCOUNT_OBJ_ID0 = A.OBJ_ID0
+                JOIN PIN.ACCOUNT_T C              ON A.OBJ_ID0 = C.POID_ID0
+                LEFT JOIN PIN.AC_PAR_T APT        ON APT.ACCOUNT_OBJ_ID0 = C.POID_ID0
+                LEFT JOIN PIN.CONFIG_AC_AGENTS_T CAA ON CAA.AGENT_ID = APT.AGENT_ID
+            WHERE 
+                C.POID_ID0 = :p_poid
+            ORDER BY APT.PAY_TYPE"
+
+            Dim pars As New Dictionary(Of String, Object) From {
+                {":p_poid", poid}
+            }
+
+            ' Ejecuta la consulta
+            Dim dtTemp As DataTable = _db.ExecuteDataTable(sql, pars, 30)
+
+            ' Si no tiene columnas todavía, copia estructura y filas
+            If _dtAcumulado.Columns.Count = 0 AndAlso dtTemp.Columns.Count > 0 Then
+                _dtAcumulado = dtTemp.Clone()
+            End If
+
+            ' Agrega los nuevos resultados (si existen)
+            For Each row As DataRow In dtTemp.Rows
+                _dtAcumulado.ImportRow(row)
+            Next
+
+            AppendDebug($"[DB][INFO] POID {poid}: {_dtAcumulado.Rows.Count} registros acumulados hasta ahora.")
+            Return _dtAcumulado
+
+        Catch ex As Exception
+            AppendDebug("[DB][ERROR] " & "ObtenerDatosPorPoid_Acumulativo: " & ex.Message)
+            Return _dtAcumulado
+        End Try
+    End Function
+
+
 
 End Class

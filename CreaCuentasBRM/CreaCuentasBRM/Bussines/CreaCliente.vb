@@ -15,8 +15,8 @@ Imports System.Linq
 Public Class CreaCliente
 
     Public Enum TipoCliente
-        PF = 1
-        PJ = 2
+        CPF = 1
+        CNPJ = 2
     End Enum
 
     ' ===== Config =====
@@ -65,7 +65,7 @@ Public Class CreaCliente
             Dim resolvedTipo As TipoCliente = tipo
             If Not [Enum].IsDefined(GetType(TipoCliente), resolvedTipo) Then
                 OUT("[CREATE][WARN] TipoCliente no reconocido (" & CInt(tipo).ToString() & "), usando PF por defecto.")
-                resolvedTipo = TipoCliente.PF
+                resolvedTipo = TipoCliente.CPF
             End If
 
             OUT("[CREATE][FLOW] TipoCliente recibido: " & resolvedTipo.ToString())
@@ -207,7 +207,7 @@ Public Class CreaCliente
         Dim complement As String = If(String.IsNullOrWhiteSpace(seed.AddressComplement), String.Empty, seed.AddressComplement.ToUpperInvariant())
 
         Dim protocol As String = GenerateUniqueProtocolId(PROTOCOL_PREFIX)
-        Dim isPF As Boolean = (tipo = TipoCliente.PF)
+        Dim isPF As Boolean = (tipo = TipoCliente.CPF)
         Dim doc As String = If(isPF, GenerarCPFValidoDemo(), GenerarCNPJValidoDemo())
 
         OUT("[CREATE][BUILD] TipoCliente=" & If(isPF, "PF", "PJ") & " Documento=" & doc)
@@ -224,6 +224,15 @@ Public Class CreaCliente
             String.Empty
         }
         Dim addressPipe As String = String.Join("|", addressParts)
+
+        'Aqui se plancha lo anterior y obtiene la direccion directo de alguna funcional.
+        Dim datos() As String = ObtenerDireccionPorUF("RJ")
+        If datos(0) <> "" AndAlso datos(1) <> "" AndAlso datos(2) <> "" Then
+            OUT($"[CREATE][BUILD] ADDRESS={datos(0)}, CITY={datos(1)}, ZIP={datos(2)}")
+            addressPipe = datos(0)
+            city = datos(1)
+            zip = datos(2)
+        End If
 
         Dim o As New JObject()
         o.Add("AC_FLD_PROTOCOL_ID", protocol)
@@ -261,7 +270,7 @@ Public Class CreaCliente
     Private Function ObtenerPoidPorDocumento(doc As String) As String
         Try
             Dim sql As String =
-                "SELECT c.poid_id0 AS account_poid
+                "Select c.poid_id0 As account_poid
                 FROM PIN.PROFILE_T P, PIN.AC_PROFILE_ACCOUNT_T PA, PIN.ACCOUNT_NAMEINFO_T A, PIN.ACCOUNT_T C
                 WHERE P.ACCOUNT_OBJ_ID0 = A.OBJ_ID0 AND A.OBJ_ID0 = C.POID_ID0
                 AND PA.OBJ_ID0 = P.POID_ID0
@@ -280,6 +289,38 @@ Public Class CreaCliente
         End Try
         Return String.Empty
     End Function
+
+    Private Function ObtenerDireccionPorUF(uf As String) As String()
+        Try
+            Dim sql As String =
+            "SELECT A.ADDRESS, A.CITY, A.ZIP
+             FROM PIN.PROFILE_T P
+             JOIN PIN.AC_PROFILE_ACCOUNT_T PA ON PA.OBJ_ID0 = P.POID_ID0
+             JOIN PIN.ACCOUNT_NAMEINFO_T A     ON P.ACCOUNT_OBJ_ID0 = A.OBJ_ID0
+             JOIN PIN.ACCOUNT_T C              ON A.OBJ_ID0 = C.POID_ID0
+             WHERE A.STATE = :p_uf
+             ORDER BY DBMS_RANDOM.VALUE
+             FETCH FIRST 1 ROWS ONLY"
+
+            Dim pars As New Dictionary(Of String, Object) From {{":p_uf", uf}}
+            Dim dt As DataTable = _db.ExecuteDataTable(sql, pars, 30)
+
+            If dt IsNot Nothing AndAlso dt.Rows.Count > 0 Then
+                Dim address As String = Convert.ToString(dt.Rows(0)("ADDRESS"))
+                Dim city As String = Convert.ToString(dt.Rows(0)("CITY"))
+                Dim zip As String = Convert.ToString(dt.Rows(0)("ZIP"))
+                Return New String() {address, city, zip}
+            End If
+
+        Catch ex As Exception
+            ErrorMessage = "ObtenerDireccionPorUF: " & ex.Message
+            OUT("[DB][ERROR] " & ErrorMessage)
+        End Try
+
+        ' Si no hay datos o error, devuelve arreglo vacío
+        Return New String() {"", "", ""}
+    End Function
+
 
     ' ===== Secuenciador de Protocolo =====
     Private Function GenerateUniqueProtocolId(prefix As String) As String

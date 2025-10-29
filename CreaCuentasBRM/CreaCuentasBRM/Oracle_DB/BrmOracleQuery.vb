@@ -79,20 +79,44 @@ Public NotInheritable Class BrmOracleQuery
     End Function
 
     Public Function ExecuteNonQuery(sql As String,
-                                    Optional parameters As Dictionary(Of String, Object) = Nothing,
-                                    Optional timeoutSeconds As Integer = 60) As Integer
+                                Optional parameters As Dictionary(Of String, Object) = Nothing,
+                                Optional timeoutSeconds As Integer = 60,
+                                Optional autoCommit As Boolean = True) As Integer
         Dim fixedSql As String = PreprocessSql(sql)
 
         Using cn As New OracleConnection(_connString)
             cn.Open()
-            Using cmd As New OracleCommand(fixedSql, cn)
-                cmd.BindByName = True
-                cmd.CommandTimeout = timeoutSeconds
-                AddParams(cmd, parameters)
-                Return cmd.ExecuteNonQuery()
-            End Using
+
+            Dim tx As OracleTransaction = Nothing
+            If autoCommit Then
+                tx = cn.BeginTransaction(IsolationLevel.ReadCommitted)
+            End If
+
+            Try
+                Using cmd As New OracleCommand(fixedSql, cn)
+                    cmd.BindByName = True
+                    cmd.CommandTimeout = timeoutSeconds
+                    If tx IsNot Nothing Then cmd.Transaction = tx
+                    AddParams(cmd, parameters)
+
+                    Dim affected As Integer = cmd.ExecuteNonQuery()
+
+                    If tx IsNot Nothing Then tx.Commit()
+                    Return affected
+                End Using
+
+            Catch
+                If tx IsNot Nothing Then
+                    Try : tx.Rollback() : Catch : End Try
+                End If
+                Throw
+
+            Finally
+                If tx IsNot Nothing Then tx.Dispose()
+            End Try
         End Using
     End Function
+
 
     ' ------------------- HELPERS -------------------
 

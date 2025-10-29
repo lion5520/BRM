@@ -86,7 +86,7 @@ Public Class BolecodeResponse
 
             If requiereActualizacion Then
                 boletoToken = ObtenerSiguienteToken("PIN.AC_PAR_REMESSA_BOLETO_T", "TOKEN_BOLETO", TOKEN_PREFIX, TOKEN_SEED)
-                pixToken = ObtenerSiguienteToken("PIN.AC_PAR_REMESSA_PIX_T", "PIX_TOKEN", TOKEN_PREFIX, TOKEN_SEED)
+                pixToken = boletoToken 'ObtenerSiguienteToken("PIN.AC_PAR_REMESSA_PIX_T", "PIX_TOKEN", TOKEN_PREFIX, TOKEN_SEED)
 
                 OUT("[BOLECODE][DB] Nuevos tokens generados TOKEN_BOLETO=" & boletoToken & " PIX_TOKEN=" & pixToken)
 
@@ -103,8 +103,8 @@ Public Class BolecodeResponse
                 OUT("[BOLECODE][DB] Tokens existentes reutilizados TOKEN_BOLETO=" & boletoToken & " PIX_TOKEN=" & pixToken)
             End If
 
-            Dim tokenEfectivo As String = NormalizarToken(boletoToken)
-            Dim barCode As String = NormalizarCodigoBarras(tokenEfectivo)
+            Dim tokenEfectivo As String = boletoToken
+            Dim barCode As String = tokenEfectivo
             Dim typeableLine As String = GenerarLineaDigitavel(barCode)
             If String.IsNullOrWhiteSpace(typeableLine) Then
                 typeableLine = TYPEABLE_SEED
